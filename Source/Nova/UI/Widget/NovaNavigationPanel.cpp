@@ -1,38 +1,23 @@
-#pragma once
+﻿#pragma once
 
 #include "NovaNavigationPanel.h"
 #include "NovaMenu.h"
 #include "Nova/Nova.h"
 
-
 /*----------------------------------------------------
-	Construct
+    Construct
 ----------------------------------------------------*/
 
 void SNovaNavigationPanel::Construct(const FArguments& InArgs)
 {
 	Menu = InArgs._Menu;
 
-	ChildSlot
-	[
-		InArgs._Content.Widget
-	];
+	ChildSlot[InArgs._Content.Widget];
 }
-
 
 /*----------------------------------------------------
-	Interaction
+    Interaction
 ----------------------------------------------------*/
-
-void SNovaNavigationPanel::AbilityPrimary()
-{
-	NLOG("SNovaNavigationPanel::AbilityPrimary");
-}
-
-void SNovaNavigationPanel::AbilitySecondary()
-{
-	NLOG("SNovaNavigationPanel::AbilitySecondary");
-}
 
 void SNovaNavigationPanel::ZoomIn()
 {
@@ -82,7 +67,7 @@ TArray<TSharedPtr<SNovaButton>>& SNovaNavigationPanel::GetNavigationButtons()
 void SNovaNavigationPanel::ResetNavigation()
 {
 	TSharedPtr<SNovaButton> FocusButton = GetDefaultFocusButton();
-	if (Menu && FocusButton)
+	if (Menu && FocusButton && FocusButton->SupportsKeyboardFocus())
 	{
 		NLOG("SNovaNavigationPanel::ResetNavigation : reset to '%s'", *FocusButton->ToString());
 		Menu->SetFocusedButton(FocusButton, true);
@@ -99,9 +84,9 @@ bool SNovaNavigationPanel::IsButtonInsideWidget(TSharedPtr<SNovaButton> Button, 
 	if (Button.IsValid() && NavigationButtons.Contains(Button))
 	{
 		const FVector2D& OriginPoint = Button->GetCachedGeometry().GetAbsolutePosition();
-		const FVector2D& Size = Button->GetCachedGeometry().GetAbsoluteSize();
-		if (Widget->GetCachedGeometry().GetLayoutBoundingRect().ContainsPoint(OriginPoint)
-			|| Widget->GetCachedGeometry().GetLayoutBoundingRect().ContainsPoint(OriginPoint + Size))
+		const FVector2D& Size        = Button->GetCachedGeometry().GetAbsoluteSize();
+		if (Widget->GetCachedGeometry().GetLayoutBoundingRect().ContainsPoint(OriginPoint) ||
+			Widget->GetCachedGeometry().GetLayoutBoundingRect().ContainsPoint(OriginPoint + Size))
 		{
 			return true;
 		}

@@ -6,7 +6,6 @@
 #include "GameFramework/GameUserSettings.h"
 #include "NovaGameUserSettings.generated.h"
 
-
 /** Default game mode class */
 UCLASS(ClassGroup = (Nova), BlueprintType)
 class UNovaGameUserSettings : public UGameUserSettings
@@ -14,25 +13,26 @@ class UNovaGameUserSettings : public UGameUserSettings
 	GENERATED_BODY()
 
 public:
-
 	UNovaGameUserSettings();
 
 	/** Apply custom graphics settings that the engine doesn't know to apply */
 	void ApplyCustomGraphicsSettings();
 
-
 	/*----------------------------------------------------
-		Inherited
+	    Inherited
 	----------------------------------------------------*/
 
 	virtual void SetToDefaults() override;
 
 	virtual void ApplySettings(bool bCheckForCommandLineOverrides) override;
 
-
 	/*----------------------------------------------------
-		Properties
+	    Properties
 	----------------------------------------------------*/
+
+	/** Enable the crash reporter */
+	UPROPERTY(Config, BlueprintReadOnly, VisibleAnywhere)
+	bool EnableCrashReports;
 
 	/** Mouse sensitivity */
 	UPROPERTY(Config, BlueprintReadOnly, VisibleAnywhere)
@@ -45,7 +45,6 @@ public:
 	/** Vertical FOV in degrees */
 	UPROPERTY(Config, BlueprintReadOnly, VisibleAnywhere)
 	float FOV;
-
 
 	/** Enable SSGI */
 	UPROPERTY(Config, BlueprintReadOnly, VisibleAnywhere)
@@ -70,5 +69,4 @@ public:
 	/** Screen percentage */
 	UPROPERTY(Config, BlueprintReadOnly, VisibleAnywhere)
 	float ScreenPercentage;
-
 };

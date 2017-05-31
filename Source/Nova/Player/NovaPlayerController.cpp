@@ -38,37 +38,32 @@
 #include "Engine/Engine.h"
 #include "EngineUtils.h"
 
-
 #define LOCTEXT_NAMESPACE "ANovaPlayerController"
 
-
 /*----------------------------------------------------
-	Constructors
+    Constructors
 ----------------------------------------------------*/
 
-ANovaPlayerViewpoint::ANovaPlayerViewpoint()
-	: Super()
+ANovaPlayerViewpoint::ANovaPlayerViewpoint() : Super()
 {
 	RootComponent = CreateDefaultSubobject<USceneComponent>("Root");
 }
 
-ANovaPlayerController::ANovaPlayerController()
-	: Super()
-	, LastNetworkError(ENovaNetworkError::Success)
-	, IsInSharedTransition(false)
+ANovaPlayerController::ANovaPlayerController() : Super(), LastNetworkError(ENovaNetworkError::Success), IsInSharedTransition(false)
 {
 	// Create the post-processing manager
 	PostProcessComponent = CreateDefaultSubobject<UNovaPostProcessComponent>(TEXT("PostProcessComponent"));
 
 	// Default settings
-	TSharedPtr<FNovaPostProcessSetting> DefaultSettings = MakeShareable(new FNovaPostProcessSetting);
+	TSharedPtr<FNovaPostProcessSetting> DefaultSettings = MakeShared<FNovaPostProcessSetting>();
 	PostProcessComponent->RegisterPreset(ENovaPostProcessPreset::Neutral, DefaultSettings);
 
 	// Initialize post-processing
 	PostProcessComponent->Initialize(
 
 		// Preset control
-		FNovaPostProcessControl::CreateLambda([=]()
+		FNovaPostProcessControl::CreateLambda(
+			[=]()
 			{
 				ENovaPostProcessPreset TargetPreset = ENovaPostProcessPreset::Neutral;
 
@@ -76,43 +71,46 @@ ANovaPlayerController::ANovaPlayerController()
 			}),
 
 		// Preset tick
-		FNovaPostProcessUpdate::CreateLambda([=](UPostProcessComponent* Volume, UMaterialInstanceDynamic* Material,
-			const TSharedPtr<FNovaPostProcessSettingBase>& Current, const TSharedPtr<FNovaPostProcessSettingBase>& Target, float Alpha)
+		FNovaPostProcessUpdate::CreateLambda(
+			[=](UPostProcessComponent* Volume, UMaterialInstanceDynamic* Material, const TSharedPtr<FNovaPostProcessSettingBase>& Current,
+				const TSharedPtr<FNovaPostProcessSettingBase>& Target, float Alpha)
 			{
-				UNovaGameUserSettings* GameUserSettings = Cast<UNovaGameUserSettings>(GEngine->GetGameUserSettings());
-				const FNovaPostProcessSetting* MyCurrent = static_cast<const FNovaPostProcessSetting*>(Current.Get());
-				const FNovaPostProcessSetting* MyTarget = static_cast<const FNovaPostProcessSetting*>(Target.Get());
+				UNovaGameUserSettings*         GameUserSettings = Cast<UNovaGameUserSettings>(GEngine->GetGameUserSettings());
+				const FNovaPostProcessSetting* MyCurrent        = static_cast<const FNovaPostProcessSetting*>(Current.Get());
+				const FNovaPostProcessSetting* MyTarget         = static_cast<const FNovaPostProcessSetting*>(Target.Get());
 
 				// Config-driven settings
-				Volume->Settings.bOverride_BloomMethod = true;
+				Volume->Settings.bOverride_BloomMethod      = true;
 				Volume->Settings.bOverride_ScreenPercentage = true;
-				Volume->Settings.bOverride_ReflectionsType = true;
-				Volume->Settings.BloomMethod = GameUserSettings->EnableCinematicBloom ? BM_FFT : BM_SOG;
-				Volume->Settings.ScreenPercentage = GameUserSettings->ScreenPercentage;
-				Volume->Settings.ReflectionsType = GameUserSettings->EnableRaytracedReflections ? EReflectionsType::RayTracing : EReflectionsType::ScreenSpace;
+				Volume->Settings.bOverride_ReflectionsType  = true;
+				Volume->Settings.BloomMethod                = GameUserSettings->EnableCinematicBloom ? BM_FFT : BM_SOG;
+				Volume->Settings.ScreenPercentage           = GameUserSettings->ScreenPercentage;
+				Volume->Settings.ReflectionsType =
+					GameUserSettings->EnableRaytracedReflections ? EReflectionsType::RayTracing : EReflectionsType::ScreenSpace;
 				Volume->Settings.RayTracingAO = GameUserSettings->EnableRaytracedAO;
 
 				// Custom settings
-				//Material->SetScalarParameterValue("ChromaIntensity", FMath::Lerp(Current.ChromaIntensity, Target.ChromaIntensity, Alpha));
+		        // Material->SetScalarParameterValue("ChromaIntensity", FMath::Lerp(Current.ChromaIntensity, Target.ChromaIntensity,
+		        // Alpha));
 
 				// Built-in settings (overrides)
 				Volume->Settings.bOverride_AutoExposureMinBrightness = true;
 				Volume->Settings.bOverride_AutoExposureMaxBrightness = true;
-				Volume->Settings.bOverride_GrainIntensity = true;
-				Volume->Settings.bOverride_SceneColorTint = true;
+				Volume->Settings.bOverride_GrainIntensity            = true;
+				Volume->Settings.bOverride_SceneColorTint            = true;
 
 				// Built in settings (values)
-				Volume->Settings.AutoExposureMinBrightness = FMath::Lerp(MyCurrent->AutoExposureBrightness, MyTarget->AutoExposureBrightness, Alpha);
-				Volume->Settings.AutoExposureMaxBrightness = FMath::Lerp(MyCurrent->AutoExposureBrightness, MyTarget->AutoExposureBrightness, Alpha);
+				Volume->Settings.AutoExposureMinBrightness =
+					FMath::Lerp(MyCurrent->AutoExposureBrightness, MyTarget->AutoExposureBrightness, Alpha);
+				Volume->Settings.AutoExposureMaxBrightness =
+					FMath::Lerp(MyCurrent->AutoExposureBrightness, MyTarget->AutoExposureBrightness, Alpha);
 				Volume->Settings.GrainIntensity = FMath::Lerp(MyCurrent->GrainIntensity, MyTarget->GrainIntensity, Alpha);
 				Volume->Settings.SceneColorTint = FMath::Lerp(MyCurrent->SceneColorTint, MyTarget->SceneColorTint, Alpha);
-			})
-		);
+			}));
 }
 
-
 /*----------------------------------------------------
-	Loading & saving
+    Loading & saving
 ----------------------------------------------------*/
 
 struct FNovaPlayerSave
@@ -122,12 +120,16 @@ struct FNovaPlayerSave
 
 TSharedPtr<FNovaPlayerSave> ANovaPlayerController::Save() const
 {
-	TSharedPtr<FNovaPlayerSave> SaveData = MakeShareable(new FNovaPlayerSave);
+	TSharedPtr<FNovaPlayerSave> SaveData = MakeShared<FNovaPlayerSave>();
 
 	// Save the spacecraft
 	ANovaSpacecraftPawn* SpacecraftPawn = GetSpacecraftPawn();
 	NCHECK(SpacecraftPawn);
-	SaveData->Spacecraft = GetSpacecraft();
+	const FNovaSpacecraft* Spacecraft = GetSpacecraft();
+	if (Spacecraft)
+	{
+		SaveData->Spacecraft = Spacecraft->GetSharedCopy();
+	}
 
 	return SaveData;
 }
@@ -141,31 +143,31 @@ void ANovaPlayerController::Load(TSharedPtr<FNovaPlayerSave> SaveData)
 	UpdateSpacecraft(*SaveData->Spacecraft.Get());
 }
 
-void ANovaPlayerController::SerializeJson(TSharedPtr<FNovaPlayerSave>& SaveData, TSharedPtr<FJsonObject>& JsonData, ENovaSerialize Direction)
+void ANovaPlayerController::SerializeJson(
+	TSharedPtr<FNovaPlayerSave>& SaveData, TSharedPtr<FJsonObject>& JsonData, ENovaSerialize Direction)
 {
 	if (Direction == ENovaSerialize::DataToJson)
 	{
-		JsonData = MakeShareable(new FJsonObject);
+		JsonData = MakeShared<FJsonObject>();
 
-		TSharedPtr<FJsonObject> FactoryJsonData;
+		TSharedPtr<FJsonObject> SpacecraftJsonData;
 		if (SaveData)
 		{
-			ANovaSpacecraftPawn::SerializeJson(SaveData->Spacecraft, FactoryJsonData, ENovaSerialize::DataToJson);
+			FNovaSpacecraft::SerializeJson(SaveData->Spacecraft, SpacecraftJsonData, ENovaSerialize::DataToJson);
 		}
-		JsonData->SetObjectField("Spacecraft", FactoryJsonData);
+		JsonData->SetObjectField("Spacecraft", SpacecraftJsonData);
 	}
 	else
 	{
-		SaveData = MakeShareable(new FNovaPlayerSave);
+		SaveData = MakeShared<FNovaPlayerSave>();
 
 		TSharedPtr<FJsonObject> FactoryJsonData = JsonData->GetObjectField("Spacecraft");
-		ANovaSpacecraftPawn::SerializeJson(SaveData->Spacecraft, FactoryJsonData, ENovaSerialize::JsonToData);
+		FNovaSpacecraft::SerializeJson(SaveData->Spacecraft, FactoryJsonData, ENovaSerialize::JsonToData);
 	}
 }
 
-
 /*----------------------------------------------------
-	Inherited
+    Inherited
 ----------------------------------------------------*/
 
 void ANovaPlayerController::BeginPlay()
@@ -284,9 +286,8 @@ void ANovaPlayerController::GetPlayerViewPoint(FVector& Location, FRotator& Rota
 	}
 }
 
-
 /*----------------------------------------------------
-	Gameplay
+    Gameplay
 ----------------------------------------------------*/
 
 void ANovaPlayerController::SharedTransition(bool CutsceneMode, FSimpleDelegate StartCallback, FSimpleDelegate FinishCallback)
@@ -299,7 +300,7 @@ void ANovaPlayerController::SharedTransition(bool CutsceneMode, FSimpleDelegate 
 		OtherPlayer->ClientStartSharedTransition(CutsceneMode);
 	}
 
-	OnSharedTransitionStarted = StartCallback;
+	OnSharedTransitionStarted  = StartCallback;
 	OnSharedTransitionFinished = FinishCallback;
 }
 
@@ -317,58 +318,58 @@ void ANovaPlayerController::ClientStartSharedTransition_Implementation(bool Cuts
 	IsInSharedTransition = true;
 
 	// Action : mark as in shared transition locally and remotely
-	FNovaAsyncAction Action =
-		FNovaAsyncAction::CreateLambda([=]()
-			{
-				ServerSharedTransitionReady();
-				NLOG("ANovaPlayerController::ClientStartSharedTransition_Implementation : done, waiting for server");
-			});
+	FNovaAsyncAction Action = FNovaAsyncAction::CreateLambda(
+		[=]()
+		{
+			ServerSharedTransitionReady();
+			NLOG("ANovaPlayerController::ClientStartSharedTransition_Implementation : done, waiting for server");
+		});
 
 	// Condition : on server, when all clients have reported as ready
 	// On client, when the server has signaled to stop
-	FNovaAsyncCondition Condition =
-		FNovaAsyncCondition::CreateLambda([=]()
+	FNovaAsyncCondition Condition = FNovaAsyncCondition::CreateLambda(
+		[=]()
+		{
+			if (GetLocalRole() == ROLE_Authority)
 			{
-				if (GetLocalRole() == ROLE_Authority)
+				// Check if all players are in transition
+				bool AllPlayersInTransition = true;
+				for (ANovaPlayerController* OtherPlayer : TActorRange<ANovaPlayerController>(GetWorld()))
 				{
-					// Check if all players are in transition
-					bool AllPlayersInTransition = true;
-					for (ANovaPlayerController* OtherPlayer : TActorRange<ANovaPlayerController>(GetWorld()))
+					if (!OtherPlayer->IsInSharedTransition)
 					{
-						if (!OtherPlayer->IsInSharedTransition)
-						{
-							AllPlayersInTransition = false;
-							break;
-						}
+						AllPlayersInTransition = false;
+						break;
 					}
-
-					// If all players are ready, fire the start event, and wait for no streaming level operation to be ongoing
-					if (AllPlayersInTransition)
-					{
-						OnSharedTransitionStarted.ExecuteIfBound();
-						OnSharedTransitionStarted.Unbind();
-
-						if (!IsStreamingLevel())
-						{
-							OnSharedTransitionFinished.ExecuteIfBound();
-							OnSharedTransitionFinished.Unbind();
-
-							for (ANovaPlayerController* OtherPlayer : TActorRange<ANovaPlayerController>(GetWorld()))
-							{
-								OtherPlayer->ClientStopSharedTransition();
-							}
-
-							return true;
-						}
-					}
-
-					return false;
 				}
-				else
+
+				// If all players are ready, fire the start event, and wait for no streaming level operation to be ongoing
+				if (AllPlayersInTransition)
 				{
-					return !IsInSharedTransition;
+					OnSharedTransitionStarted.ExecuteIfBound();
+					OnSharedTransitionStarted.Unbind();
+
+					if (!IsStreamingLevel())
+					{
+						OnSharedTransitionFinished.ExecuteIfBound();
+						OnSharedTransitionFinished.Unbind();
+
+						for (ANovaPlayerController* OtherPlayer : TActorRange<ANovaPlayerController>(GetWorld()))
+						{
+							OtherPlayer->ClientStopSharedTransition();
+						}
+
+						return true;
+					}
 				}
-			});
+
+				return false;
+			}
+			else
+			{
+				return !IsInSharedTransition;
+			}
+		});
 
 	// Run the process
 	if (CutsceneMode)
@@ -400,19 +401,21 @@ void ANovaPlayerController::Dock()
 {
 	NLOG("ANovaPlayerController::Dock");
 
-	FSimpleDelegate EndCutscene = FSimpleDelegate::CreateLambda([=]()
-	{
-		GetMenuManager()->OpenMenu(FNovaAsyncAction::CreateLambda([=]()
-			{
-				GetSpacecraftPawn()->ResetView();
-			})
-		);
-	});
+	FSimpleDelegate EndCutscene = FSimpleDelegate::CreateLambda(
+		[=]()
+		{
+			GetMenuManager()->OpenMenu(FNovaAsyncAction::CreateLambda(
+				[=]()
+				{
+					GetSpacecraftPawn()->ResetView();
+				}));
+		});
 
-	FNovaAsyncAction StartCutscene = FNovaAsyncAction::CreateLambda([=]()
-	{
-		GetSpacecraftPawn()->GetSpacecraftMovement()->Dock(EndCutscene);
-	});
+	FNovaAsyncAction StartCutscene = FNovaAsyncAction::CreateLambda(
+		[=]()
+		{
+			GetSpacecraftPawn()->GetSpacecraftMovement()->Dock(EndCutscene);
+		});
 
 	GetMenuManager()->CloseMenu(StartCutscene);
 }
@@ -421,19 +424,21 @@ void ANovaPlayerController::Undock()
 {
 	NLOG("ANovaPlayerController::Undock");
 
-	FSimpleDelegate EndCutscene = FSimpleDelegate::CreateLambda([=]()
-	{
-		GetMenuManager()->OpenMenu(FNovaAsyncAction::CreateLambda([=]()
-			{
-				GetSpacecraftPawn()->ResetView();
-			})
-		);
-	});
+	FSimpleDelegate EndCutscene = FSimpleDelegate::CreateLambda(
+		[=]()
+		{
+			GetMenuManager()->OpenMenu(FNovaAsyncAction::CreateLambda(
+				[=]()
+				{
+					GetSpacecraftPawn()->ResetView();
+				}));
+		});
 
-	FNovaAsyncAction StartCutscene = FNovaAsyncAction::CreateLambda([=]()
-	{
-		GetSpacecraftPawn()->GetSpacecraftMovement()->Undock(EndCutscene);
-	});
+	FNovaAsyncAction StartCutscene = FNovaAsyncAction::CreateLambda(
+		[=]()
+		{
+			GetSpacecraftPawn()->GetSpacecraftMovement()->Undock(EndCutscene);
+		});
 
 	GetMenuManager()->CloseMenu(StartCutscene);
 }
@@ -451,9 +456,8 @@ bool ANovaPlayerController::IsStreamingLevel() const
 	return false;
 }
 
-
 /*----------------------------------------------------
-	Server-side save
+    Server-side save
 ----------------------------------------------------*/
 
 void ANovaPlayerController::ClientLoadPlayer()
@@ -473,7 +477,7 @@ void ANovaPlayerController::ClientLoadPlayer()
 #endif
 
 	// Serialize the save data and spawn the player actors on the server
-	TSharedPtr<FJsonObject> JsonData;
+	TSharedPtr<FJsonObject>     JsonData;
 	TSharedPtr<FNovaPlayerSave> PlayerSaveData = GameInstance->GetPlayerSave();
 	SerializeJson(PlayerSaveData, JsonData, ENovaSerialize::DataToJson);
 	ServerLoadPlayer(UNovaSaveManager::JsonToString(JsonData));
@@ -486,7 +490,7 @@ void ANovaPlayerController::ServerLoadPlayer_Implementation(const FString& Seria
 
 	// Deserialize save data
 	TSharedPtr<FNovaPlayerSave> SaveData;
-	TSharedPtr<FJsonObject> JsonData = UNovaSaveManager::StringToJson(SerializedSaveData);
+	TSharedPtr<FJsonObject>     JsonData = UNovaSaveManager::StringToJson(SerializedSaveData);
 	SerializeJson(SaveData, JsonData, ENovaSerialize::JsonToData);
 
 	// Load
@@ -498,10 +502,14 @@ void ANovaPlayerController::UpdateSpacecraft(const FNovaSpacecraft& Spacecraft)
 	NLOG("ANovaPlayerController::UpdateSpacecraft ('%s')", *GetRoleString(this));
 
 	// Update the player spacecraft
-	ANovaGameState* GameState = GetWorld()->GetGameState<ANovaGameState>();
-	GetPlayerState<ANovaPlayerState>()->SetSpacecraftIdentifier(Spacecraft.Identifier);
-	GetGameWorld()->AddPlayerSpacecraft(Spacecraft);
+	if (GetLocalRole() == ROLE_Authority)
+	{
+		ANovaGameState* GameState = GetWorld()->GetGameState<ANovaGameState>();
+		GetPlayerState<ANovaPlayerState>()->SetSpacecraftIdentifier(Spacecraft.Identifier);
+		GetGameWorld()->UpdateSpacecraft(Spacecraft, true);
+	}
 
+	// Tell the server
 	if (GetLocalRole() == ROLE_AutonomousProxy)
 	{
 		ServerUpdateSpacecraft(Spacecraft);
@@ -516,33 +524,31 @@ void ANovaPlayerController::ServerUpdateSpacecraft_Implementation(const FNovaSpa
 	UpdateSpacecraft(Spacecraft);
 }
 
-
 /*----------------------------------------------------
-	Game flow
+    Game flow
 ----------------------------------------------------*/
 
 void ANovaPlayerController::StartGame(FString SaveName, bool Online)
 {
 	NLOG("ANovaPlayerController::StartGame : loading from '%s', online = %d", *SaveName, Online);
 
-	GetMenuManager()->RunAction(ENovaLoadingScreen::Launch,
-		FNovaAsyncAction::CreateLambda([=]()
-			{
-				GetGameInstance<UNovaGameInstance>()->StartGame(SaveName, Online);
-			})
-	);
+	GetMenuManager()->RunAction(ENovaLoadingScreen::Launch, FNovaAsyncAction::CreateLambda(
+																[=]()
+																{
+																	GetGameInstance<UNovaGameInstance>()->StartGame(SaveName, Online);
+																}));
 }
 
 void ANovaPlayerController::SetGameOnline(bool Online)
 {
 	NLOG("ANovaPlayerController::SetGameOnline : online = %d", Online);
 
-	GetMenuManager()->RunAction(ENovaLoadingScreen::Launch,
-		FNovaAsyncAction::CreateLambda([=]()
-			{
-				GetGameInstance<UNovaGameInstance>()->SetGameOnline(GetWorld()->GetName(), Online);
-			})
-	);
+	GetMenuManager()->RunAction(ENovaLoadingScreen::Launch, FNovaAsyncAction::CreateLambda(
+																[=]()
+																{
+																	GetGameInstance<UNovaGameInstance>()->SetGameOnline(
+																		GetWorld()->GetName(), Online);
+																}));
 }
 
 void ANovaPlayerController::GoToMainMenu()
@@ -551,13 +557,12 @@ void ANovaPlayerController::GoToMainMenu()
 	{
 		NLOG("ANovaPlayerController::GoToMainMenu");
 
-		GetMenuManager()->RunAction(ENovaLoadingScreen::Black,
-			FNovaAsyncAction::CreateLambda([=]()
-				{
-					GetGameInstance<UNovaGameInstance>()->SaveGame(this, true);
-					GetGameInstance<UNovaGameInstance>()->GoToMainMenu();
-				})
-		);
+		GetMenuManager()->RunAction(ENovaLoadingScreen::Black, FNovaAsyncAction::CreateLambda(
+																   [=]()
+																   {
+																	   GetGameInstance<UNovaGameInstance>()->SaveGame(this, true);
+																	   GetGameInstance<UNovaGameInstance>()->GoToMainMenu();
+																   }));
 	}
 }
 
@@ -567,12 +572,11 @@ void ANovaPlayerController::ExitGame()
 	{
 		NLOG("ANovaPlayerController::ExitGame");
 
-		GetMenuManager()->RunAction(ENovaLoadingScreen::Black,
-			FNovaAsyncAction::CreateLambda([=]()
-				{
-					FGenericPlatformMisc::RequestExit(false);
-				})
-		);
+		GetMenuManager()->RunAction(ENovaLoadingScreen::Black, FNovaAsyncAction::CreateLambda(
+																   [=]()
+																   {
+																	   FGenericPlatformMisc::RequestExit(false);
+																   }));
 	}
 }
 
@@ -583,8 +587,8 @@ void ANovaPlayerController::InviteFriend(TSharedRef<FOnlineFriend> Friend)
 	UNovaGameInstance* GameInstance = GetGameInstance<UNovaGameInstance>();
 	NCHECK(GameInstance);
 
-	Notify(FText::FormatNamed(LOCTEXT("InviteFriend", "Invited {friend}"),
-		TEXT("friend"), FText::FromString(Friend->GetDisplayName())), ENovaNotificationType::Info);
+	Notify(FText::FormatNamed(LOCTEXT("InviteFriend", "Invited {friend}"), TEXT("friend"), FText::FromString(Friend->GetDisplayName())),
+		ENovaNotificationType::Info);
 
 	GameInstance->InviteFriend(Friend->GetUserId());
 }
@@ -593,26 +597,25 @@ void ANovaPlayerController::JoinFriend(TSharedRef<FOnlineFriend> Friend)
 {
 	NLOG("ANovaPlayerController::JoinFriend");
 
-	GetMenuManager()->RunAction(ENovaLoadingScreen::Launch,
-		FNovaAsyncAction::CreateLambda([=]()
-			{
-				Notify(FText::FormatNamed(LOCTEXT("JoiningFriend", "Joining {friend}"),
-					TEXT("friend"), FText::FromString(Friend->GetDisplayName())), ENovaNotificationType::Info);
-				GetGameInstance<UNovaGameInstance>()->JoinFriend(Friend->GetUserId());
-			})
-	);
+	GetMenuManager()->RunAction(ENovaLoadingScreen::Launch, FNovaAsyncAction::CreateLambda(
+																[=]()
+																{
+																	Notify(FText::FormatNamed(LOCTEXT("JoiningFriend", "Joining {friend}"),
+																			   TEXT("friend"), FText::FromString(Friend->GetDisplayName())),
+																		ENovaNotificationType::Info);
+																	GetGameInstance<UNovaGameInstance>()->JoinFriend(Friend->GetUserId());
+																}));
 }
 
 void ANovaPlayerController::AcceptInvitation(const FOnlineSessionSearchResult& InviteResult)
 {
 	NLOG("ANovaPlayerController::AcceptInvitation");
 
-	GetMenuManager()->RunAction(ENovaLoadingScreen::Launch,
-		FNovaAsyncAction::CreateLambda([=]()
-			{
-				GetGameInstance<UNovaGameInstance>()->JoinSearchResult(InviteResult);
-			})
-	);
+	GetMenuManager()->RunAction(ENovaLoadingScreen::Launch, FNovaAsyncAction::CreateLambda(
+																[=]()
+																{
+																	GetGameInstance<UNovaGameInstance>()->JoinSearchResult(InviteResult);
+																}));
 }
 
 bool ANovaPlayerController::IsReady() const
@@ -625,20 +628,18 @@ bool ANovaPlayerController::IsReady() const
 	{
 		// Check spacecraft pawn
 		ANovaSpacecraftPawn* SpacecraftPawn = GetSpacecraftPawn();
-		bool IsSpacecraftReady = IsValid(SpacecraftPawn) && GetSpacecraft().IsValid()
-			&& SpacecraftPawn->GetSpacecraftMovement()->IsReady();
+		bool IsSpacecraftReady = IsValid(SpacecraftPawn) && GetSpacecraft() && SpacecraftPawn->GetSpacecraftMovement()->IsReady();
 
 		// Check game state
-		ANovaGameState* GameState = GetWorld()->GetGameState<ANovaGameState>();
-		bool IsGameStateReady = IsValid(GameState) && GameState->GetCurrentArea() != nullptr;
+		ANovaGameState* GameState        = GetWorld()->GetGameState<ANovaGameState>();
+		bool            IsGameStateReady = IsValid(GameState) && GameState->GetCurrentArea() != nullptr;
 
 		return !IsStreamingLevel() && IsSpacecraftReady && IsGameStateReady;
 	}
 }
 
-
 /*----------------------------------------------------
-	Menus
+    Menus
 ----------------------------------------------------*/
 
 bool ANovaPlayerController::IsOnMainMenu() const
@@ -656,9 +657,8 @@ void ANovaPlayerController::Notify(FText Text, ENovaNotificationType Type)
 	GetMenuManager()->GetOverlay()->Notify(Text, Type);
 }
 
-
 /*----------------------------------------------------
-	Input
+    Input
 ----------------------------------------------------*/
 
 void ANovaPlayerController::SetupInputComponent()
@@ -666,7 +666,8 @@ void ANovaPlayerController::SetupInputComponent()
 	Super::SetupInputComponent();
 
 	// Core bindings
-	FInputActionBinding& AnyKeyBinding = InputComponent->BindAction("AnyKey", EInputEvent::IE_Pressed, this, &ANovaPlayerController::AnyKey);
+	FInputActionBinding& AnyKeyBinding =
+		InputComponent->BindAction("AnyKey", EInputEvent::IE_Pressed, this, &ANovaPlayerController::AnyKey);
 	AnyKeyBinding.bConsumeInput = false;
 	InputComponent->BindAction(FNovaPlayerInput::MenuToggle, EInputEvent::IE_Released, this, &ANovaPlayerController::ToggleMenuOrQuit);
 	if (GetWorld()->WorldType == EWorldType::PIE)
@@ -712,9 +713,8 @@ void ANovaPlayerController::AnyKey(FKey Key)
 	GetMenuManager()->SetUsingGamepad(Key.IsGamepadKey());
 }
 
-
 /*----------------------------------------------------
-	Getters
+    Getters
 ----------------------------------------------------*/
 
 ANovaGameWorld* ANovaPlayerController::GetGameWorld() const
@@ -723,9 +723,9 @@ ANovaGameWorld* ANovaPlayerController::GetGameWorld() const
 	return GameState ? GameState->GetGameWorld() : nullptr;
 }
 
-TSharedPtr<FNovaSpacecraft> ANovaPlayerController::GetSpacecraft() const
+const FNovaSpacecraft* ANovaPlayerController::GetSpacecraft() const
 {
-	ANovaGameWorld* GameWorld = GetGameWorld();
+	ANovaGameWorld*   GameWorld        = GetGameWorld();
 	ANovaPlayerState* OwnedPlayerState = GetPlayerState<ANovaPlayerState>();
 
 	if (IsValid(GameWorld) && IsValid(OwnedPlayerState))
@@ -739,9 +739,8 @@ TSharedPtr<FNovaSpacecraft> ANovaPlayerController::GetSpacecraft() const
 	}
 }
 
-
 /*----------------------------------------------------
-	Test code
+    Test code
 ----------------------------------------------------*/
 
 #if WITH_EDITOR
@@ -763,16 +762,16 @@ void ANovaPlayerController::OnJoinRandomSession(TArray<FOnlineSessionSearchResul
 	{
 		if (Result.Session.OwningUserId != GetLocalPlayer()->GetPreferredUniqueNetId())
 		{
-			GetMenuManager()->RunAction(ENovaLoadingScreen::Launch,
-				FNovaAsyncAction::CreateLambda([=]()
-					{
-						Notify(FText::FormatNamed(LOCTEXT("JoinFriend", "Joining {session}"),
-							TEXT("session"), FText::FromString(*Result.Session.GetSessionIdStr())),
-							ENovaNotificationType::Info);
+			GetMenuManager()->RunAction(
+				ENovaLoadingScreen::Launch, FNovaAsyncAction::CreateLambda(
+												[=]()
+												{
+													Notify(FText::FormatNamed(LOCTEXT("JoinFriend", "Joining {session}"), TEXT("session"),
+															   FText::FromString(*Result.Session.GetSessionIdStr())),
+														ENovaNotificationType::Info);
 
-						GetGameInstance<UNovaGameInstance>()->JoinSearchResult(Result);
-					})
-			);
+													GetGameInstance<UNovaGameInstance>()->JoinSearchResult(Result);
+												}));
 		}
 	}
 }
@@ -792,8 +791,7 @@ void ANovaPlayerController::TestJoin()
 }
 
 void ANovaPlayerController::TestActor()
-{
-}
+{}
 
 #endif
 

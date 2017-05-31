@@ -1,4 +1,4 @@
-﻿// Nova project - Gwennaël Arbona
+// Nova project - Gwennaël Arbona
 
 #pragma once
 
@@ -8,11 +8,11 @@
 
 #include "Online.h"
 
-
+/** Flight menu */
 class SNovaMainMenuFlight : public SNovaTabPanel
 {
 	/*----------------------------------------------------
-		Slate arguments
+	    Slate arguments
 	----------------------------------------------------*/
 
 	SLATE_BEGIN_ARGS(SNovaMainMenuFlight)
@@ -24,12 +24,13 @@ class SNovaMainMenuFlight : public SNovaTabPanel
 	SLATE_END_ARGS()
 
 public:
-
 	void Construct(const FArguments& InArgs);
 
 	/*----------------------------------------------------
-		Interaction
+	    Interaction
 	----------------------------------------------------*/
+
+	virtual void Tick(const FGeometry& AllottedGeometry, const double CurrentTime, const float DeltaTime) override;
 
 	virtual void Show() override;
 
@@ -41,50 +42,47 @@ public:
 
 	virtual TSharedPtr<SNovaButton> GetDefaultFocusButton() const override;
 
-
 	/*----------------------------------------------------
-		Internals
+	    Internals
 	----------------------------------------------------*/
 
 protected:
-
 	/** Get the spacecraft pawn */
 	class ANovaSpacecraftPawn* GetSpacecraftPawn() const;
 
-	/** Get the spacecraft pawn */
+	/** Get the spacecraft movement component */
 	class UNovaSpacecraftMovementComponent* GetSpacecraftMovement() const;
 
-
 	/*----------------------------------------------------
-		Content callbacks
+	    Content callbacks
 	----------------------------------------------------*/
 
 protected:
-
 	bool IsUndockEnabled() const;
 	bool IsDockEnabled() const;
 
-
 	/*----------------------------------------------------
-		Callbacks
+	    Callbacks
 	----------------------------------------------------*/
 
 	void OnUndock();
 	void OnDock();
 
+	void OnTrajectoryChanged(TSharedPtr<struct FNovaTrajectory> Trajectory);
+	void OnCommitTrajectory();
 
 	/*----------------------------------------------------
-		Data
+	    Data
 	----------------------------------------------------*/
 
 protected:
-
-	// Menu manager
-	TWeakObjectPtr<UNovaMenuManager>              MenuManager;
+	// Settings
+	TWeakObjectPtr<UNovaMenuManager> MenuManager;
 
 	// Slate widgets
-	TSharedPtr<class SRetainerWidget>             MapRetainer;
-	TSharedPtr<class SNovaButton>                 UndockButton;
-	TSharedPtr<class SNovaButton>                 DockButton;
-
+	TSharedPtr<class SRetainerWidget>           MapRetainer;
+	TSharedPtr<class SNovaOrbitalMap>           OrbitalMap;
+	TSharedPtr<class SNovaButton>               UndockButton;
+	TSharedPtr<class SNovaButton>               DockButton;
+	TSharedPtr<class SNovaTrajectoryCalculator> TrajectoryCalculator;
 };

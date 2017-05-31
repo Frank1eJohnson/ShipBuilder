@@ -3,23 +3,19 @@
 #include "NovaGameState.h"
 #include "NovaArea.h"
 
+#include "Nova/Player/NovaPlayerState.h"
+
 #include "Net/UnrealNetwork.h"
 
-
 /*----------------------------------------------------
-	Constructor
+    Constructor
 ----------------------------------------------------*/
 
-ANovaGameState::ANovaGameState()
-	: Super()
-	, GameWorld(nullptr)
-	, CurrentArea(nullptr)
-{
-}
-
+ANovaGameState::ANovaGameState() : Super(), GameWorld(nullptr), CurrentArea(nullptr)
+{}
 
 /*----------------------------------------------------
-	Gameplay
+    Gameplay
 ----------------------------------------------------*/
 
 void ANovaGameState::SetGameWorld(class ANovaGameWorld* World)
@@ -43,9 +39,24 @@ FName ANovaGameState::GetCurrentLevelName() const
 	return CurrentArea->LevelName;
 }
 
+TArray<FGuid> ANovaGameState::GetPlayerSpacecraftIdentifiers() const
+{
+	TArray<FGuid> Result;
+
+	for (const APlayerState* PlayerStateBase : PlayerArray)
+	{
+		const ANovaPlayerState* PlayerState = Cast<ANovaPlayerState>(PlayerStateBase);
+		if (IsValid(PlayerState))
+		{
+			Result.Add(PlayerState->GetSpacecraftIdentifier());
+		}
+	}
+
+	return Result;
+}
 
 /*----------------------------------------------------
-	Networking
+    Networking
 ----------------------------------------------------*/
 
 void ANovaGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -55,4 +66,3 @@ void ANovaGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	DOREPLIFETIME(ANovaGameState, GameWorld);
 	DOREPLIFETIME(ANovaGameState, CurrentArea);
 }
-

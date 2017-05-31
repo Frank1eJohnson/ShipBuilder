@@ -20,12 +20,10 @@
 #include "Widgets/Layout/SScaleBox.h"
 #include "DrawDebugHelpers.h"
 
-
 #define LOCTEXT_NAMESPACE "SNovaMainMenuAssembly"
 
-
 /*----------------------------------------------------
-	Constructor
+    Constructor
 ----------------------------------------------------*/
 
 SNovaMainMenuAssembly::SNovaMainMenuAssembly()
@@ -40,19 +38,18 @@ void SNovaMainMenuAssembly::Construct(const FArguments& InArgs)
 {
 	// Data
 	const FNovaMainTheme& Theme = FNovaStyleSet::GetMainTheme();
-	MenuManager = InArgs._MenuManager;
+	MenuManager                 = InArgs._MenuManager;
 
 	// Parent constructor
-	SNovaNavigationPanel::Construct(SNovaNavigationPanel::FArguments()
-		.Menu(InArgs._Menu)
-	);
+	SNovaNavigationPanel::Construct(SNovaNavigationPanel::FArguments().Menu(InArgs._Menu));
 
+	// clang-format off
 	ChildSlot
 	.VAlign(VAlign_Bottom)
 	[
 		SNew(SBackgroundBlur)
-		.BlurRadius(this, &SNovaMainMenuAssembly::GetBlurRadius)
-		.BlurStrength(this, &SNovaMainMenuAssembly::GetBlurStrength)
+		.BlurRadius(this, &SNovaTabPanel::GetBlurRadius)
+		.BlurStrength(this, &SNovaTabPanel::GetBlurStrength)
 		.bApplyAlphaToBlur(true)
 		.Padding(0)
 		[
@@ -106,13 +103,12 @@ void SNovaMainMenuAssembly::Construct(const FArguments& InArgs)
 					+ SVerticalBox::Slot()
 					.AutoHeight()
 					[
-						SAssignNew(HighlightButton, SNovaButton) // No navigation
+						SNovaAssignNew(HighlightButton, SNovaButton)
 						.Action(FNovaPlayerInput::MenuSecondary)
 						.Text(LOCTEXT("Highlight", "Highlight selection"))
 						.HelpText(LOCTEXT("HighlightHelp", "Toggle the highlighting of the current selection"))
 						.OnClicked(this, &SNovaMainMenuAssembly::OnToggleHighlight)
 						.Enabled(this, &SNovaMainMenuAssembly::IsToggleHighlightEnabled)
-						.Focusable(false)
 						.Toggle(true)
 					]
 				]
@@ -337,7 +333,7 @@ void SNovaMainMenuAssembly::Construct(const FArguments& InArgs)
 					+ SVerticalBox::Slot()
 					.AutoHeight()
 					[
-						SNew(SNovaButton) // No navigation
+						SNovaNew(SNovaButton)
 						.Action(FNovaPlayerInput::MenuCancel)
 						.Text(LOCTEXT("CompartmentBack", "Back to assembly"))
 						.HelpText(LOCTEXT("CompartmentBackHelp", "Go back to the main assembly"))
@@ -419,14 +415,15 @@ void SNovaMainMenuAssembly::Construct(const FArguments& InArgs)
 			];
 	}
 
+	// clang-format on
+
 	// Default settings
 	HighlightButton->SetActive(true);
 	SetCompartmentPanelVisible(false);
 }
 
-
 /*----------------------------------------------------
-	Inherited
+    Inherited
 ----------------------------------------------------*/
 
 void SNovaMainMenuAssembly::Show()
@@ -444,16 +441,6 @@ void SNovaMainMenuAssembly::Show()
 	// Reset compartment data
 	SetSelectedCompartment(GetSpacecraftPawn()->GetCompartmentCount() > 0 ? 0 : INDEX_NONE);
 	SetCompartmentPanelVisible(false);
-}
-
-void SNovaMainMenuAssembly::AbilityPrimary()
-{
-	EditCompartmentButton->OnButtonClicked();
-}
-
-void SNovaMainMenuAssembly::AbilitySecondary()
-{
-	HighlightButton->OnButtonClicked();
 }
 
 void SNovaMainMenuAssembly::ZoomIn()
@@ -495,19 +482,19 @@ int32 GetCompartmentIndexAtPosition(ANovaPlayerController* PC, ANovaSpacecraftPa
 
 	if (PC->DeprojectScreenPositionToWorld(Position.X, Position.Y, WorldLocation, WorldDirection))
 	{
-		TArray<FHitResult> TraceHits;
-		FVector TraceEndLocation = WorldLocation + WorldDirection * 10000;
+		TArray<FHitResult>    TraceHits;
+		FVector               TraceEndLocation = WorldLocation + WorldDirection * 10000;
 		FCollisionQueryParams TraceParams(FName("AssemblyTrace"));
 
 		PC->GetWorld()->LineTraceMultiByChannel(TraceHits, WorldLocation, TraceEndLocation, ECC_Camera, TraceParams);
 
-		//DrawDebugLine(PC->GetWorld(), WorldLocation, TraceEndLocation, FColor::Red, true);
+		// DrawDebugLine(PC->GetWorld(), WorldLocation, TraceEndLocation, FColor::Red, true);
 
 		for (const FHitResult& TraceHit : TraceHits)
 		{
 			if (TraceHit.bBlockingHit)
 			{
-				//DrawDebugPoint(PC->GetWorld(), TraceHit.Location, 4, FColor::Red, true);
+				// DrawDebugPoint(PC->GetWorld(), TraceHit.Location, 4, FColor::Red, true);
 
 				int32 HitIndex = SpacecraftPawn->GetCompartmentIndexByPrimitive(TraceHit.GetComponent());
 				if (HitIndex != INDEX_NONE)
@@ -521,7 +508,7 @@ int32 GetCompartmentIndexAtPosition(ANovaPlayerController* PC, ANovaSpacecraftPa
 	return INDEX_NONE;
 }
 
-void SNovaMainMenuAssembly::Clicked(const FVector2D& Position)
+void SNovaMainMenuAssembly::OnClicked(const FVector2D& Position)
 {
 	if (!IsCompartmentPanelVisible && Menu->IsActiveNavigationPanel(this))
 	{
@@ -533,10 +520,9 @@ void SNovaMainMenuAssembly::Clicked(const FVector2D& Position)
 	}
 }
 
-void SNovaMainMenuAssembly::DoubleClicked(const FVector2D& Position)
+void SNovaMainMenuAssembly::OnDoubleClicked(const FVector2D& Position)
 {
-	if (!IsCompartmentPanelVisible && Menu->IsActiveNavigationPanel(this)
-		&& SelectedCompartmentIndex != INDEX_NONE)
+	if (!IsCompartmentPanelVisible && Menu->IsActiveNavigationPanel(this) && SelectedCompartmentIndex != INDEX_NONE)
 	{
 		int32 HitIndex = GetCompartmentIndexAtPosition(MenuManager->GetPC(), GetSpacecraftPawn(), Position);
 		if (HitIndex == SelectedCompartmentIndex)
@@ -609,9 +595,8 @@ void SNovaMainMenuAssembly::Tick(const FGeometry& AllottedGeometry, const double
 	}
 }
 
-
 /*----------------------------------------------------
-	Internals
+    Internals
 ----------------------------------------------------*/
 
 ANovaSpacecraftPawn* SNovaMainMenuAssembly::GetSpacecraftPawn() const
@@ -638,8 +623,8 @@ void SNovaMainMenuAssembly::SetCompartmentPanelVisible(bool Active)
 
 	if (IsCompartmentPanelVisible)
 	{
-		ANovaSpacecraftPawn* SpacecraftPawn = GetSpacecraftPawn();
-		const FNovaCompartment& Compartment = SpacecraftPawn->GetCompartment(SelectedCompartmentIndex);
+		ANovaSpacecraftPawn*    SpacecraftPawn = GetSpacecraftPawn();
+		const FNovaCompartment& Compartment    = SpacecraftPawn->GetCompartment(SelectedCompartmentIndex);
 
 		// Refresh hull type list
 		HullTypeList = Compartment.Description->GetSupportedHullTypes();
@@ -665,9 +650,8 @@ void SNovaMainMenuAssembly::SetCompartmentPanelVisible(bool Active)
 	ResetNavigation();
 }
 
-
 /*----------------------------------------------------
-	Compartment template list
+    Compartment template list
 ----------------------------------------------------*/
 
 TSharedRef<SWidget> SNovaMainMenuAssembly::GenerateCompartmentItem(const UNovaCompartmentDescription* Description) const
@@ -677,13 +661,11 @@ TSharedRef<SWidget> SNovaMainMenuAssembly::GenerateCompartmentItem(const UNovaCo
 
 FText SNovaMainMenuAssembly::GenerateCompartmentTooltip(const UNovaCompartmentDescription* Description) const
 {
-	return FText::FormatNamed(LOCTEXT("CompartmentHelp", "Build a new {compartment}"),
-		TEXT("compartment"), Description->Name);
+	return FText::FormatNamed(LOCTEXT("CompartmentHelp", "Build a new {compartment}"), TEXT("compartment"), Description->Name);
 }
 
-
 /*----------------------------------------------------
-	Compartment module list
+    Compartment module list
 ----------------------------------------------------*/
 
 bool SNovaMainMenuAssembly::IsModuleListEnabled(int32 ModuleIndex) const
@@ -691,13 +673,14 @@ bool SNovaMainMenuAssembly::IsModuleListEnabled(int32 ModuleIndex) const
 	if (IsCompartmentPanelVisible)
 	{
 		ANovaSpacecraftPawn* SpacecraftPawn = GetSpacecraftPawn();
-		const FNovaCompartment& Compartment = SpacecraftPawn->GetCompartment(SelectedCompartmentIndex);
-		return ModuleIndex < Compartment.Description->ModuleSlots.Num();
+		if (IsValid(SpacecraftPawn))
+		{
+			const FNovaCompartment& Compartment = SpacecraftPawn->GetCompartment(SelectedCompartmentIndex);
+			return ModuleIndex < Compartment.Description->ModuleSlots.Num();
+		}
 	}
-	else
-	{
-		return false;
-	}
+
+	return false;
 }
 
 TSharedRef<SWidget> SNovaMainMenuAssembly::GenerateModuleItem(const UNovaModuleDescription* Module) const
@@ -714,8 +697,7 @@ FText SNovaMainMenuAssembly::GenerateModuleTooltip(const UNovaModuleDescription*
 {
 	if (Module)
 	{
-		return FText::FormatNamed(LOCTEXT("ModuleHelp", "Add {module} to this compartment"),
-			TEXT("module"), Module->Name);
+		return FText::FormatNamed(LOCTEXT("ModuleHelp", "Add {module} to this compartment"), TEXT("module"), Module->Name);
 	}
 	else
 	{
@@ -723,9 +705,8 @@ FText SNovaMainMenuAssembly::GenerateModuleTooltip(const UNovaModuleDescription*
 	}
 }
 
-
 /*----------------------------------------------------
-	Compartment equipment list
+    Compartment equipment list
 ----------------------------------------------------*/
 
 bool SNovaMainMenuAssembly::IsEquipmentListEnabled(int32 EquipmentIndex) const
@@ -733,13 +714,15 @@ bool SNovaMainMenuAssembly::IsEquipmentListEnabled(int32 EquipmentIndex) const
 	if (IsCompartmentPanelVisible)
 	{
 		ANovaSpacecraftPawn* SpacecraftPawn = GetSpacecraftPawn();
-		const FNovaCompartment& Compartment = SpacecraftPawn->GetCompartment(SelectedCompartmentIndex);
-		return EquipmentIndex < Compartment.Description->EquipmentSlots.Num();
+
+		if (IsValid(SpacecraftPawn))
+		{
+			const FNovaCompartment& Compartment = SpacecraftPawn->GetCompartment(SelectedCompartmentIndex);
+			return EquipmentIndex < Compartment.Description->EquipmentSlots.Num();
+		}
 	}
-	else
-	{
-		return false;
-	}
+
+	return false;
 }
 
 TSharedRef<SWidget> SNovaMainMenuAssembly::GenerateEquipmentItem(const UNovaEquipmentDescription* Equipment) const
@@ -756,8 +739,7 @@ FText SNovaMainMenuAssembly::GenerateEquipmentTooltip(const UNovaEquipmentDescri
 {
 	if (Equipment)
 	{
-		return FText::FormatNamed(LOCTEXT("EquipmentHelp", "Add {equipment} to this compartment"),
-			TEXT("equipment"), Equipment->Name);
+		return FText::FormatNamed(LOCTEXT("EquipmentHelp", "Add {equipment} to this compartment"), TEXT("equipment"), Equipment->Name);
 	}
 	else
 	{
@@ -765,45 +747,34 @@ FText SNovaMainMenuAssembly::GenerateEquipmentTooltip(const UNovaEquipmentDescri
 	}
 }
 
-
 /*----------------------------------------------------
-	Compartment hull type list
+    Compartment hull type list
 ----------------------------------------------------*/
 
 TSharedRef<SWidget> SNovaMainMenuAssembly::GenerateHullTypeItem(ENovaHullType Type) const
 {
 	const FNovaMainTheme& Theme = FNovaStyleSet::GetMainTheme();
 
-	return SNew(SOverlay)
-		.Clipping(EWidgetClipping::ClipToBoundsAlways)
+	return SNew(SOverlay).Clipping(EWidgetClipping::ClipToBoundsAlways)
 
-		+ SOverlay::Slot()
-		[
-			SNew(SScaleBox)
-			[
-				// TODO : image background for various hull types
-				SNew(SImage)
-				.Image(new FSlateNoResource)
-			]
-		]
+		 + SOverlay::Slot()[SNew(SScaleBox)[
+			   // TODO : image background for various hull types
+			   SNew(SImage).Image(new FSlateNoResource)]]
 
-		+ SOverlay::Slot()
-		.Padding(Theme.ContentPadding)
-		[
-			SNew(STextBlock)
-			.TextStyle(&Theme.MainFont)
-			.Text(GetHullTypeName(Type))
-		];
+		 + SOverlay::Slot().Padding(Theme.ContentPadding)[SNew(STextBlock).TextStyle(&Theme.MainFont).Text(GetHullTypeName(Type))];
 }
 
 FText SNovaMainMenuAssembly::GetHullTypeName(ENovaHullType Type) const
 {
 	switch (Type)
 	{
-	default:
-	case ENovaHullType::None:          return LOCTEXT("ENovaHullTypeNone",          "No hull");
-	case ENovaHullType::PlasticFabric: return LOCTEXT("ENovaHullTypePlasticFabric", "Plastic isolation");
-	case ENovaHullType::MetalFabric:   return LOCTEXT("ENovaHullTypeMetalFabric",   "Metallic isolation");
+		default:
+		case ENovaHullType::None:
+			return LOCTEXT("ENovaHullTypeNone", "No hull");
+		case ENovaHullType::PlasticFabric:
+			return LOCTEXT("ENovaHullTypePlasticFabric", "Plastic isolation");
+		case ENovaHullType::MetalFabric:
+			return LOCTEXT("ENovaHullTypeMetalFabric", "Metallic isolation");
 	}
 }
 
@@ -811,8 +782,7 @@ FText SNovaMainMenuAssembly::GenerateHullTypeTooltip(ENovaHullType Type) const
 {
 	if (Type != ENovaHullType::None)
 	{
-		return FText::FormatNamed(LOCTEXT("HullTypeHelp", "Use {hull} for this compartment"),
-			TEXT("hull"), GetHullTypeName(Type));
+		return FText::FormatNamed(LOCTEXT("HullTypeHelp", "Use {hull} for this compartment"), TEXT("hull"), GetHullTypeName(Type));
 	}
 	else
 	{
@@ -820,50 +790,19 @@ FText SNovaMainMenuAssembly::GenerateHullTypeTooltip(ENovaHullType Type) const
 	}
 }
 
-
 /*----------------------------------------------------
-	Content callbacks
+    Content callbacks
 ----------------------------------------------------*/
-
-TOptional<int32> SNovaMainMenuAssembly::GetBlurRadius() const
-{
-	const FNovaMainTheme& Theme = FNovaStyleSet::GetMainTheme();
-
-	float Alpha = FMath::InterpEaseInOut(0.0f, 1.0f, CurrentAlpha, ENovaUIConstants::EaseStandard);
-	return static_cast<int32>(Theme.BlurRadius * Alpha);
-}
-
-float SNovaMainMenuAssembly::GetBlurStrength() const
-{
-	const FNovaMainTheme& Theme = FNovaStyleSet::GetMainTheme();
-
-	float Alpha = FMath::InterpEaseInOut(0.0f, 1.0f, CurrentAlpha, ENovaUIConstants::EaseStandard);
-	return Theme.BlurStrength * Alpha;
-}
 
 TSharedRef<SWidget> SNovaMainMenuAssembly::GenerateAssetItem(const UNovaAssetDescription* Asset) const
 {
 	const FNovaMainTheme& Theme = FNovaStyleSet::GetMainTheme();
 
-	return SNew(SOverlay)
-		.Clipping(EWidgetClipping::ClipToBoundsAlways)
+	return SNew(SOverlay).Clipping(EWidgetClipping::ClipToBoundsAlways)
 
-		+ SOverlay::Slot()
-		[
-			SNew(SScaleBox)
-			[
-				SNew(SImage)
-				.Image(Asset ? &Asset->AssetRender : new FSlateNoResource)
-			]
-		]
+		 + SOverlay::Slot()[SNew(SScaleBox)[SNew(SImage).Image(Asset ? &Asset->AssetRender : new FSlateNoResource)]]
 
-		+ SOverlay::Slot()
-		.Padding(Theme.ContentPadding)
-		[
-			SNew(STextBlock)
-			.TextStyle(&Theme.MainFont)
-			.Text(GetAssetName(Asset))
-		];
+		 + SOverlay::Slot().Padding(Theme.ContentPadding)[SNew(STextBlock).TextStyle(&Theme.MainFont).Text(GetAssetName(Asset))];
 }
 
 FText SNovaMainMenuAssembly::GetAssetName(const UNovaAssetDescription* Asset) const
@@ -873,13 +812,17 @@ FText SNovaMainMenuAssembly::GetAssetName(const UNovaAssetDescription* Asset) co
 
 FLinearColor SNovaMainMenuAssembly::GetMainColor() const
 {
-	float Alpha = IsCompartmentPanelVisible ? 0.0f : FMath::InterpEaseInOut(0.0f, 1.0f, CurrentFadeTime / FadeDuration, ENovaUIConstants::EaseStandard);
+	float Alpha = IsCompartmentPanelVisible
+					? 0.0f
+					: FMath::InterpEaseInOut(0.0f, 1.0f, CurrentFadeTime / FadeDuration, ENovaUIConstants::EaseStandard);
 	return FLinearColor(1, 1, 1, Alpha);
 }
 
 FLinearColor SNovaMainMenuAssembly::GetCompartmentColor() const
 {
-	float Alpha = IsCompartmentPanelVisible ? FMath::InterpEaseInOut(0.0f, 1.0f, CurrentFadeTime / FadeDuration, ENovaUIConstants::EaseStandard) : 0.0f;
+	float Alpha = IsCompartmentPanelVisible
+					? FMath::InterpEaseInOut(0.0f, 1.0f, CurrentFadeTime / FadeDuration, ENovaUIConstants::EaseStandard)
+					: 0.0f;
 	return FLinearColor(1, 1, 1, Alpha);
 }
 
@@ -934,17 +877,15 @@ FKey SNovaMainMenuAssembly::GetNextCompartmentKey() const
 	return MenuManager->GetFirstActionKey(FNovaPlayerInput::MenuZoomIn);
 }
 
-
 /*----------------------------------------------------
-	Callbacks
+    Callbacks
 ----------------------------------------------------*/
 
 void SNovaMainMenuAssembly::OnEditCompartment()
 {
 	NCHECK(SelectedCompartmentIndex >= 0 && SelectedCompartmentIndex < ENovaConstants::MaxCompartmentCount);
 
-	NLOG("SNovaMainMenuAssembly::OnEditCompartment : editing compartment at index %d",
-		SelectedCompartmentIndex);
+	NLOG("SNovaMainMenuAssembly::OnEditCompartment : editing compartment at index %d", SelectedCompartmentIndex);
 
 	EditedCompartmentIndex = SelectedCompartmentIndex;
 
@@ -958,17 +899,14 @@ void SNovaMainMenuAssembly::OnRemoveCompartment()
 
 	ModalPanel->Show(LOCTEXT("ScrapCompartmentConfirm", "Scrap compartment"),
 		LOCTEXT("ScrapCompartmentConfirmHelp", "Confirm the scrapping of this compartment"),
-		FSimpleDelegate::CreateSP(this, &SNovaMainMenuAssembly::OnRemoveCompartmentConfirmed),
-		FSimpleDelegate(),
-		FSimpleDelegate());
+		FSimpleDelegate::CreateSP(this, &SNovaMainMenuAssembly::OnRemoveCompartmentConfirmed), FSimpleDelegate(), FSimpleDelegate());
 }
 
 void SNovaMainMenuAssembly::OnRemoveCompartmentConfirmed()
 {
 	NCHECK(SelectedCompartmentIndex >= 0 && SelectedCompartmentIndex < ENovaConstants::MaxCompartmentCount);
 
-	NLOG("SNovaMainMenuAssembly::OnRemoveCompartment : removing compartment at index %d",
-		SelectedCompartmentIndex);
+	NLOG("SNovaMainMenuAssembly::OnRemoveCompartment : removing compartment at index %d", SelectedCompartmentIndex);
 
 	if (GetSpacecraftPawn()->RemoveCompartment(SelectedCompartmentIndex))
 	{
@@ -988,8 +926,8 @@ void SNovaMainMenuAssembly::OnSelectedCompartmentChanged(const UNovaCompartmentD
 {
 	int32 NewIndex = GetNewBuildIndex(Forward);
 
-	NLOG("SNovaMainMenuAssembly::OnSelectedCompartmentChanged : adding new compartment at index %d ('%s')",
-		NewIndex, *Compartment->Name.ToString());
+	NLOG("SNovaMainMenuAssembly::OnSelectedCompartmentChanged : adding new compartment at index %d ('%s')", NewIndex,
+		*Compartment->Name.ToString());
 
 	if (GetSpacecraftPawn()->InsertCompartment(FNovaCompartment(Compartment), NewIndex))
 	{
@@ -1011,8 +949,8 @@ void SNovaMainMenuAssembly::OnCompartmentSelected(int32 Index)
 
 void SNovaMainMenuAssembly::OnSelectedModuleChanged(const UNovaModuleDescription* Module, int32 Index, int32 SlotIndex)
 {
-	NLOG("SNovaMainMenuAssembly::OnSelectedModuleChanged : adding new module at index %d, slot %d ('%s')",
-		EditedCompartmentIndex, SlotIndex, Module ? *Module->Name.ToString() : TEXT("nullptr"));
+	NLOG("SNovaMainMenuAssembly::OnSelectedModuleChanged : adding new module at index %d, slot %d ('%s')", EditedCompartmentIndex,
+		SlotIndex, Module ? *Module->Name.ToString() : TEXT("nullptr"));
 
 	GetSpacecraftPawn()->GetCompartment(EditedCompartmentIndex).Modules[SlotIndex].Description = Module;
 	GetSpacecraftPawn()->RequestAssemblyUpdate();
@@ -1020,8 +958,8 @@ void SNovaMainMenuAssembly::OnSelectedModuleChanged(const UNovaModuleDescription
 
 void SNovaMainMenuAssembly::OnSelectedEquipmentChanged(const UNovaEquipmentDescription* Equipment, int32 Index, int32 SlotIndex)
 {
-	NLOG("SNovaMainMenuAssembly::OnSelectedEquipmentChanged : adding new equipment at index %d, slot %d ('%s')",
-		EditedCompartmentIndex, SlotIndex, Equipment ? *Equipment->Name.ToString() : TEXT("nullptr"));
+	NLOG("SNovaMainMenuAssembly::OnSelectedEquipmentChanged : adding new equipment at index %d, slot %d ('%s')", EditedCompartmentIndex,
+		SlotIndex, Equipment ? *Equipment->Name.ToString() : TEXT("nullptr"));
 
 	GetSpacecraftPawn()->GetCompartment(EditedCompartmentIndex).Equipments[SlotIndex] = Equipment;
 	GetSpacecraftPawn()->RequestAssemblyUpdate();
@@ -1049,6 +987,5 @@ void SNovaMainMenuAssembly::OnToggleHighlight()
 {
 	GetSpacecraftPawn()->SetHighlightCompartment(HighlightButton->IsActive() ? SelectedCompartmentIndex : INDEX_NONE);
 }
-
 
 #undef LOCTEXT_NAMESPACE

@@ -8,9 +8,10 @@
 #include "NovaMainMenuAssembly.h"
 #include "NovaMainMenuSettings.h"
 
+#include "Nova/UI/Widget/NovaButton.h"
 #include "Nova/UI/Widget/NovaKeyLabel.h"
 #include "Nova/UI/Widget/NovaTabView.h"
-#include "Nova/UI/Widget/NovaButton.h"
+#include "Nova/UI/Widget/NovaWindowManipulator.h"
 #include "Nova/UI/NovaUITypes.h"
 
 #include "Nova/Player/NovaMenuManager.h"
@@ -18,19 +19,14 @@
 
 #include "Nova/Nova.h"
 
-
 #define LOCTEXT_NAMESPACE "SNovaMainMenu"
 
-
 /*----------------------------------------------------
-	Constructor
+    Constructor
 ----------------------------------------------------*/
 
 SNovaMainMenu::SNovaMainMenu()
-	: TooltipDelay(0.5f)
-	, TooltipFadeDuration(ENovaUIConstants::FadeDurationShort)
-	, CurrentTooltipDelay(0)
-	, CurrentTooltipTime(0)
+	: TooltipDelay(0.5f), TooltipFadeDuration(ENovaUIConstants::FadeDurationShort), CurrentTooltipDelay(0), CurrentTooltipTime(0)
 {}
 
 void SNovaMainMenu::Construct(const FArguments& InArgs)
@@ -39,11 +35,9 @@ void SNovaMainMenu::Construct(const FArguments& InArgs)
 	const FNovaMainTheme& Theme = FNovaStyleSet::GetMainTheme();
 
 	// Parent constructor
-	SNovaMenu::Construct(SNovaMenu::FArguments()
-		.MenuManager(InArgs._MenuManager)
-	);
+	SNovaMenu::Construct(SNovaMenu::FArguments().MenuManager(InArgs._MenuManager));
 
-	// Structure
+	// clang-format off
 	MainContainer->SetContent(
 		SAssignNew(TabView, SNovaTabView)
 
@@ -64,23 +58,33 @@ void SNovaMainMenu::Construct(const FArguments& InArgs)
 		// Close button
 		.End()
 		[
-			SNew(SNovaButton) // No navigation
+			SNovaNew(SNovaButton)
 			.Theme("TabButton")
 			.Size("TabButtonSize")
 			.Action(FNovaPlayerInput::MenuToggle)
 			.Text(this, &SNovaMainMenu::GetCloseText)
 			.HelpText(this, &SNovaMainMenu::GetCloseHelpText)
 			.OnClicked(this, &SNovaMainMenu::OnClose)
-			.Focusable(false)
 		]
 
 		// Header widget
 		.Header()
 		[
-			SNew(STextBlock)
-			.TextStyle(&Theme.SubtitleFont)
-			.Text(this, &SNovaMainMenu::GetTooltipText)
-			.ColorAndOpacity(this, &SNovaMainMenu::GetTooltipColor)
+			SNew(SBox)
+			.Padding(Theme.ContentPadding)
+			[
+				SNew(STextBlock)
+				.TextStyle(&Theme.SubtitleFont)
+				.Text(this, &SNovaMainMenu::GetTooltipText)
+				.ColorAndOpacity(this, &SNovaMainMenu::GetTooltipColor)
+			]
+		]
+
+		// Manipulator
+		.BackgroundWidget()
+		[
+			SNew(SNovaMenuManipulator)
+			.Image(&Theme.MainMenuManipulator)
 		]
 
 		// Home menu
@@ -140,15 +144,15 @@ void SNovaMainMenu::Construct(const FArguments& InArgs)
 			.MenuManager(MenuManager)
 		]
 	);
+	// clang-format on
 
 	// Set the default menu
 	WasOnMainMenu = true;
 	TabView->SetTabIndex(static_cast<uint8>(ENovaMainMenuType::Home));
 }
 
-
 /*----------------------------------------------------
-	Interaction
+    Interaction
 ----------------------------------------------------*/
 
 void SNovaMainMenu::Show()
@@ -176,7 +180,7 @@ void SNovaMainMenu::ShowTooltip(SWidget* TargetWidget, FText Content)
 {
 	if (TargetWidget != CurrentTooltipWidget)
 	{
-		CurrentTooltipWidget = TargetWidget;
+		CurrentTooltipWidget  = TargetWidget;
 		DesiredTooltipContent = Content.ToString();
 	}
 }
@@ -185,7 +189,7 @@ void SNovaMainMenu::HideTooltip(SWidget* TargetWidget)
 {
 	if (TargetWidget == CurrentTooltipWidget)
 	{
-		CurrentTooltipWidget = nullptr;
+		CurrentTooltipWidget  = nullptr;
 		DesiredTooltipContent = FString();
 	}
 
@@ -238,59 +242,26 @@ FReply SNovaMainMenu::OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& Ke
 		const FKey Key = KeyEvent.GetKey();
 
 		// Move between tabs
-		if (IsActionKey(FNovaPlayerInput::MenuPreviousTab, Key))
+		if (!CurrentNavigationPanel->IsModal())
 		{
-			TabView->ShowPreviousTab();
-			Result = FReply::Handled();
-		}
-		else if (IsActionKey(FNovaPlayerInput::MenuNextTab, Key))
-		{
-			TabView->ShowNextTab();
-			Result = FReply::Handled();
-		}
-
-		// Exit
-		else if (IsActionKey(FNovaPlayerInput::MenuToggle, Key))
-		{
-			OnClose();
-			Result = FReply::Handled();
+			if (IsActionKey(FNovaPlayerInput::MenuPreviousTab, Key))
+			{
+				TabView->ShowPreviousTab();
+				Result = FReply::Handled();
+			}
+			else if (IsActionKey(FNovaPlayerInput::MenuNextTab, Key))
+			{
+				TabView->ShowNextTab();
+				Result = FReply::Handled();
+			}
 		}
 	}
 
 	return Result;
 }
-
-FReply SNovaMainMenu::OnMouseButtonDown(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
-{
-	FReply Result = SNovaMenu::OnMouseButtonDown(MyGeometry, MouseEvent);
-
-	// This could be yet another virtual method to inherit, but it seems quite specific
-	if (static_cast<ENovaMainMenuType>(TabView->GetCurrentTabIndex()) == ENovaMainMenuType::Assembly)
-	{
-		FVector2D Position = MyGeometry.AbsoluteToLocal(MouseEvent.GetScreenSpacePosition());
-		static_cast<SNovaMainMenuAssembly&>(TabView->GetCurrentTabContent().Get()).Clicked(Position);
-	}
-
-	return Result;
-}
-
-FReply SNovaMainMenu::OnMouseButtonDoubleClick(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
-{
-	FReply Result = SNovaMenu::OnMouseButtonDoubleClick(MyGeometry, MouseEvent);
-
-	// This could be yet another virtual method to inherit, but it seems quite specific
-	if (static_cast<ENovaMainMenuType>(TabView->GetCurrentTabIndex()) == ENovaMainMenuType::Assembly)
-	{
-		FVector2D Position = MyGeometry.AbsoluteToLocal(MouseEvent.GetScreenSpacePosition());
-		static_cast<SNovaMainMenuAssembly&>(TabView->GetCurrentTabContent().Get()).DoubleClicked(Position);
-	}
-
-	return Result;
-}
-
 
 /*----------------------------------------------------
-	Content callbacks
+    Content callbacks
 ----------------------------------------------------*/
 
 bool SNovaMainMenu::IsHomeMenuVisible() const
@@ -347,10 +318,10 @@ FText SNovaMainMenu::GetTooltipText() const
 FSlateColor SNovaMainMenu::GetTooltipColor() const
 {
 	float Alpha = (CurrentTooltipTime / TooltipFadeDuration);
-	Alpha = FMath::InterpEaseInOut(0.0f, 1.0f, Alpha, ENovaUIConstants::EaseStandard);
+	Alpha       = FMath::InterpEaseInOut(0.0f, 1.0f, Alpha, ENovaUIConstants::EaseStandard);
 
 	const FNovaMainTheme& Theme = FNovaStyleSet::GetMainTheme();
-	FLinearColor Color = Theme.MainFont.ColorAndOpacity.GetSpecifiedColor();
+	FLinearColor          Color = Theme.MainFont.ColorAndOpacity.GetSpecifiedColor();
 	Color.A *= Alpha;
 
 	return Color;
@@ -366,9 +337,8 @@ FKey SNovaMainMenu::GetNextTabKey() const
 	return MenuManager->GetFirstActionKey(FNovaPlayerInput::MenuNextTab);
 }
 
-
 /*----------------------------------------------------
-	Action callbacks
+    Action callbacks
 ----------------------------------------------------*/
 
 void SNovaMainMenu::OnClose()
@@ -386,6 +356,5 @@ void SNovaMainMenu::OnClose()
 		MenuManager->GetPC()->ToggleMenuOrQuit();
 	}
 }
-
 
 #undef LOCTEXT_NAMESPACE

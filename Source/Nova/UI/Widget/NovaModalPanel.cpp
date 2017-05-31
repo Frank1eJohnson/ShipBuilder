@@ -9,27 +9,23 @@
 
 #include "Widgets/Layout/SBackgroundBlur.h"
 
-
 #define LOCTEXT_NAMESPACE "SNovaModalPanel"
 
-
 /*----------------------------------------------------
-	Construct
+    Construct
 ----------------------------------------------------*/
 
 void SNovaModalPanel::Construct(const FArguments& InArgs)
 {
 	// Setup
-	const FNovaMainTheme& Theme = FNovaStyleSet::GetMainTheme();
+	const FNovaMainTheme&   Theme       = FNovaStyleSet::GetMainTheme();
 	const FNovaButtonTheme& ButtonTheme = FNovaStyleSet::GetButtonTheme();
-	ParentPanel = InArgs._ParentPanel;
+	ParentPanel                         = InArgs._ParentPanel;
 
 	// Parent constructor
-	SNovaNavigationPanel::Construct(SNovaNavigationPanel::FArguments()
-		.Menu(InArgs._Menu)
-	);
+	SNovaNavigationPanel::Construct(SNovaNavigationPanel::FArguments().Menu(InArgs._Menu));
 
-	// Structure
+	// clang-format off
 	ChildSlot
 	[
 		SNew(SVerticalBox)
@@ -88,7 +84,7 @@ void SNovaModalPanel::Construct(const FArguments& InArgs)
 
 							+ SHorizontalBox::Slot()
 							[
-								SNew(SNovaButton) // No navigation
+								SNovaNew(SNovaButton)
 								.Action(FNovaPlayerInput::MenuConfirm)
 								.Text(InArgs._ConfirmText.IsBound() ?
 									InArgs._ConfirmText : InArgs._ConfirmText.IsSet() ?
@@ -101,7 +97,7 @@ void SNovaModalPanel::Construct(const FArguments& InArgs)
 
 							+ SHorizontalBox::Slot()
 							[
-								SNew(SNovaButton) // No navigation
+								SNovaNew(SNovaButton)
 								.Action(FNovaPlayerInput::MenuSecondary)
 								.Text(InArgs._DismissText.IsBound() ?
 									InArgs._DismissText : InArgs._DismissText.IsSet()
@@ -115,7 +111,7 @@ void SNovaModalPanel::Construct(const FArguments& InArgs)
 
 							+ SHorizontalBox::Slot()
 							[
-								SNew(SNovaButton) // No navigation
+								SNovaNew(SNovaButton)
 								.Action(FNovaPlayerInput::MenuCancel)
 								.Text(InArgs._CancelText.IsBound() ?
 									InArgs._CancelText : InArgs._CancelText.IsSet() ?
@@ -138,6 +134,7 @@ void SNovaModalPanel::Construct(const FArguments& InArgs)
 
 		+ SVerticalBox::Slot()
 	];
+	// clang-format on
 
 	SAssignNew(EmptyWidget, SBox);
 
@@ -145,15 +142,14 @@ void SNovaModalPanel::Construct(const FArguments& InArgs)
 	FadeDuration = ENovaUIConstants::FadeDurationShort;
 
 	// Initialization
-	ShouldShow = false;
-	CurrentAlpha = 0;
+	ShouldShow      = false;
+	CurrentAlpha    = 0;
 	CurrentFadeTime = 0;
 	SetVisibility(EVisibility::HitTestInvisible);
 }
 
-
 /*----------------------------------------------------
-	Interaction
+    Interaction
 ----------------------------------------------------*/
 
 void SNovaModalPanel::Tick(const FGeometry& AllottedGeometry, const double CurrentTime, const float DeltaTime)
@@ -170,7 +166,7 @@ void SNovaModalPanel::Tick(const FGeometry& AllottedGeometry, const double Curre
 		CurrentFadeTime -= DeltaTime;
 	}
 	CurrentFadeTime = FMath::Clamp(CurrentFadeTime, 0.0f, FadeDuration);
-	CurrentAlpha = FMath::InterpEaseInOut(0.0f, 1.0f, CurrentFadeTime / FadeDuration, ENovaUIConstants::EaseStandard);
+	CurrentAlpha    = FMath::InterpEaseInOut(0.0f, 1.0f, CurrentFadeTime / FadeDuration, ENovaUIConstants::EaseStandard);
 
 	// Update visibility
 	if (CurrentAlpha > 0)
@@ -183,14 +179,6 @@ void SNovaModalPanel::Tick(const FGeometry& AllottedGeometry, const double Curre
 	}
 }
 
-void SNovaModalPanel::AbilitySecondary()
-{
-	if (OnDismissed.IsBound())
-	{
-		OnDismissPanel();
-	}
-}
-
 bool SNovaModalPanel::Confirm()
 {
 	OnConfirmPanel();
@@ -199,21 +187,18 @@ bool SNovaModalPanel::Confirm()
 }
 
 bool SNovaModalPanel::Cancel()
-{	
+{
 	OnCancelPanel();
 
 	return true;
 }
 
-void SNovaModalPanel::Show(FText Title, FText Text,
-	FSimpleDelegate NewOnConfirmed,
-	FSimpleDelegate NewOnDismissed,
-	FSimpleDelegate NewOnCancelled,
-	TSharedPtr<SWidget> Content)
+void SNovaModalPanel::Show(FText Title, FText Text, FSimpleDelegate NewOnConfirmed, FSimpleDelegate NewOnDismissed,
+	FSimpleDelegate NewOnCancelled, TSharedPtr<SWidget> Content)
 {
 	NLOG("SNovaModalPanel::Show");
 
-	ShouldShow = true;
+	ShouldShow  = true;
 	OnConfirmed = NewOnConfirmed;
 	OnDismissed = NewOnDismissed;
 	OnCancelled = NewOnCancelled;
@@ -251,9 +236,8 @@ void SNovaModalPanel::Hide()
 	}
 }
 
-
 /*----------------------------------------------------
-	Content callbacks
+    Content callbacks
 ----------------------------------------------------*/
 
 EVisibility SNovaModalPanel::GetDismissVisibility() const
@@ -272,9 +256,8 @@ FSlateColor SNovaModalPanel::GetBackgroundColor() const
 	return GetColor();
 }
 
-
 /*----------------------------------------------------
-	Callbacks
+    Callbacks
 ----------------------------------------------------*/
 
 void SNovaModalPanel::OnConfirmPanel()

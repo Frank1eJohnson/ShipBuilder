@@ -9,25 +9,20 @@
 
 #include "Nova/Nova.h"
 
-
 #define LOCTEXT_NAMESPACE "UNovaContractManager"
-
 
 // Statics
 UNovaContractManager* UNovaContractManager::Singleton = nullptr;
 
-
 /*----------------------------------------------------
-	Constructor
+    Constructor
 ----------------------------------------------------*/
 
 UNovaContractManager::UNovaContractManager()
-{
-}
-
+{}
 
 /*----------------------------------------------------
-	Loading & saving
+    Loading & saving
 ----------------------------------------------------*/
 
 struct FNovaContractManagerSave
@@ -39,15 +34,12 @@ struct FNovaContractManagerSave
 
 TSharedPtr<FNovaContractManagerSave> UNovaContractManager::Save() const
 {
-	TSharedPtr<FNovaContractManagerSave> SaveData = MakeShareable(new FNovaContractManagerSave);
+	TSharedPtr<FNovaContractManagerSave> SaveData = MakeShared<FNovaContractManagerSave>();
 
 	// Save contracts
 	for (TSharedPtr<FNovaContract> Contract : CurrentContracts)
 	{
-		SaveData->CurrentContracts.Add(TPair<ENovaContractType, TSharedPtr<FJsonObject>>(
-			Contract->GetType(),
-			Contract->Save())
-		);
+		SaveData->CurrentContracts.Add(TPair<ENovaContractType, TSharedPtr<FJsonObject>>(Contract->GetType(), Contract->Save()));
 	}
 
 	// Save the tracked contract
@@ -85,28 +77,29 @@ void UNovaContractManager::Load(TSharedPtr<FNovaContractManagerSave> SaveData)
 		NLOG("UNovaContractManager::Load : adding tutorial contract");
 
 		// TODO : tutorial contract and track it
-		//TSharedPtr<FNovaContract> Tutorial = FNovaContract::New(ENovaContractType::Tutorial, GameInstance);
-		//CurrentContracts.Add(Tutorial);
+		// TSharedPtr<FNovaContract> Tutorial = FNovaContract::New(ENovaContractType::Tutorial, GameInstance);
+		// CurrentContracts.Add(Tutorial);
 
 		CurrentTrackedContract = INDEX_NONE;
 	}
 }
 
-void UNovaContractManager::SerializeJson(TSharedPtr<FNovaContractManagerSave>& SaveData, TSharedPtr<FJsonObject>& JsonData, ENovaSerialize Direction)
+void UNovaContractManager::SerializeJson(
+	TSharedPtr<FNovaContractManagerSave>& SaveData, TSharedPtr<FJsonObject>& JsonData, ENovaSerialize Direction)
 {
 	if (Direction == ENovaSerialize::DataToJson)
 	{
-		JsonData = MakeShareable(new FJsonObject);
+		JsonData = MakeShared<FJsonObject>();
 
 		TArray<TSharedPtr<FJsonValue>> SavedContracts;
 		for (TPair<ENovaContractType, TSharedPtr<FJsonObject>> ContractData : SaveData->CurrentContracts)
 		{
-			TSharedPtr<FJsonObject> ContractJsonData = MakeShareable(new FJsonObject);
+			TSharedPtr<FJsonObject> ContractJsonData = MakeShared<FJsonObject>();
 
 			ContractJsonData->SetNumberField("Type", static_cast<uint8>(ContractData.Key));
 			ContractJsonData->SetObjectField("Object", ContractJsonData);
 
-			SavedContracts.Add(MakeShareable(new FJsonValueObject(ContractJsonData)));
+			SavedContracts.Add(MakeShared<FJsonValueObject>(ContractJsonData));
 		}
 
 		JsonData->SetArrayField("Contracts", SavedContracts);
@@ -114,7 +107,7 @@ void UNovaContractManager::SerializeJson(TSharedPtr<FNovaContractManagerSave>& S
 	}
 	else
 	{
-		SaveData = MakeShareable(new FNovaContractManagerSave);
+		SaveData = MakeShared<FNovaContractManagerSave>();
 
 		const TArray<TSharedPtr<FJsonValue>>* SavedContracts;
 		if (JsonData->TryGetArrayField("Contracts", SavedContracts))
@@ -124,24 +117,23 @@ void UNovaContractManager::SerializeJson(TSharedPtr<FNovaContractManagerSave>& S
 				TSharedPtr<FJsonObject> ContractEntry = ContractValue->AsObject();
 
 				SaveData->CurrentContracts.Add(TPair<ENovaContractType, TSharedPtr<FJsonObject>>(
-					static_cast<ENovaContractType>((uint8)ContractEntry->GetNumberField("Type")),
-					ContractEntry->GetObjectField("Object")
-				));
+					static_cast<ENovaContractType>((uint8) ContractEntry->GetNumberField("Type")),
+					ContractEntry->GetObjectField("Object")));
 			}
 		}
 
 		SaveData->CurrentTrackedContract = 0;
 		JsonData->TryGetNumberField("TrackedContract", SaveData->CurrentTrackedContract);
 	}
- }
+}
 
 /*----------------------------------------------------
-	System interface
+    System interface
 ----------------------------------------------------*/
 
 void UNovaContractManager::Initialize(class UNovaGameInstance* Instance)
 {
-	Singleton = this;
+	Singleton    = this;
 	GameInstance = Instance;
 }
 
@@ -154,9 +146,8 @@ void UNovaContractManager::OnEvent(FNovaContractEvent Event)
 	}
 }
 
-
 /*----------------------------------------------------
-	Game interface
+    Game interface
 ----------------------------------------------------*/
 
 bool UNovaContractManager::CanGenerateContract() const
@@ -261,6 +252,5 @@ int32 UNovaContractManager::GetTrackedContract()
 {
 	return CurrentContracts.Num() > 0 ? CurrentTrackedContract : INDEX_NONE;
 }
-
 
 #undef LOCTEXT_NAMESPACE

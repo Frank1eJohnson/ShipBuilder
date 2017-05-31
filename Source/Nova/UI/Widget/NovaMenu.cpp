@@ -9,14 +9,12 @@
 #include "Nova/Nova.h"
 
 #include "GameFramework/InputSettings.h"
-#include "Input/HittestGrid.h" 
-
+#include "Input/HittestGrid.h"
 
 #define LOCTEXT_NAMESPACE "SNovaMenu"
 
-
 /*----------------------------------------------------
-	Constructor
+    Constructor
 ----------------------------------------------------*/
 
 SNovaMenu::SNovaMenu()
@@ -34,10 +32,10 @@ void SNovaMenu::Construct(const FArguments& InArgs)
 {
 	// Data
 	const FNovaMainTheme& Theme = FNovaStyleSet::GetMainTheme();
-	MenuManager = InArgs._MenuManager;
+	MenuManager                 = InArgs._MenuManager;
 	NCHECK(MenuManager.IsValid());
 
-	// Structure
+	// clang-format off
 	ChildSlot
 	[
 		SAssignNew(MainOverlay, SOverlay)
@@ -47,11 +45,11 @@ void SNovaMenu::Construct(const FArguments& InArgs)
 			SAssignNew(MainContainer, SBox)
 		]
 	];
+	// clang-format on
 }
 
-
 /*----------------------------------------------------
-	Interaction
+    Interaction
 ----------------------------------------------------*/
 
 void SNovaMenu::Tick(const FGeometry& AllottedGeometry, const double CurrentTime, const float DeltaTime)
@@ -77,7 +75,7 @@ void SNovaMenu::Tick(const FGeometry& AllottedGeometry, const double CurrentTime
 
 		if (MousePressed)
 		{
-			auto& App = FSlateApplication::Get();
+			auto&     App       = FSlateApplication::Get();
 			FVector2D CursorPos = App.GetCursorPos();
 
 			// Compute the current analog mouse input with axis snapping
@@ -101,19 +99,35 @@ void SNovaMenu::Tick(const FGeometry& AllottedGeometry, const double CurrentTime
 
 			PreviousMousePosition = CursorPos;
 			MousePressedContinued = true;
-
 		}
 		else
 		{
 			MousePressedContinued = false;
 		}
 
-		// Pass analog input
+		// Process analog input
 		float ConstantRateRatio = DeltaTime * 60.0f;
-		CurrentNavigationPanel->HorizontalAnalogInput(ConstantRateRatio * CurrentAnalogInput.X);
-		CurrentNavigationPanel->VerticalAnalogInput(ConstantRateRatio * CurrentAnalogInput.Y);
-	}
+		float HorizontalInput   = ConstantRateRatio * CurrentAnalogInput.X;
+		float VerticalInput     = ConstantRateRatio * CurrentAnalogInput.Y;
 
+		// Pass analog input when using gamepads
+		bool                    HorizontalInputConsumed = false;
+		bool                    VerticalInputConsumed   = false;
+		TSharedPtr<SNovaButton> Button                  = GetFocusedButton();
+		if (MenuManager->IsUsingGamepad() && Button.IsValid())
+		{
+			HorizontalInputConsumed = Button->HorizontalAnalogInput(HorizontalInput);
+			VerticalInputConsumed   = Button->VerticalAnalogInput(VerticalInput);
+		}
+		if (!HorizontalInputConsumed)
+		{
+			CurrentNavigationPanel->HorizontalAnalogInput(HorizontalInput);
+		}
+		if (!VerticalInputConsumed)
+		{
+			CurrentNavigationPanel->VerticalAnalogInput(VerticalInput);
+		}
+	}
 }
 
 bool SNovaMenu::SupportsKeyboardFocus() const
@@ -129,6 +143,12 @@ FReply SNovaMenu::OnMouseButtonDown(const FGeometry& MyGeometry, const FPointerE
 
 	MenuManager->SetUsingGamepad(false);
 
+	if (CurrentNavigationPanel)
+	{
+		FVector2D Position = MyGeometry.AbsoluteToLocal(MouseEvent.GetScreenSpacePosition());
+		CurrentNavigationPanel->OnClicked(Position);
+	}
+
 	return FReply::Handled().SetUserFocus(SharedThis(this), EFocusCause::SetDirectly);
 }
 
@@ -139,6 +159,19 @@ FReply SNovaMenu::OnMouseButtonUp(const FGeometry& MyGeometry, const FPointerEve
 	MousePressed = false;
 
 	return FReply::Handled().SetUserFocus(SharedThis(this), EFocusCause::SetDirectly);
+}
+
+FReply SNovaMenu::OnMouseButtonDoubleClick(const FGeometry& MyGeometry, const FPointerEvent& MouseEvent)
+{
+	FReply Result = SCompoundWidget::OnMouseButtonDoubleClick(MyGeometry, MouseEvent);
+
+	if (CurrentNavigationPanel)
+	{
+		FVector2D Position = MyGeometry.AbsoluteToLocal(MouseEvent.GetScreenSpacePosition());
+		CurrentNavigationPanel->OnDoubleClicked(Position);
+	}
+
+	return Result;
 }
 
 void SNovaMenu::OnMouseLeave(const FPointerEvent& MouseEvent)
@@ -153,17 +186,17 @@ FReply SNovaMenu::OnAnalogValueChanged(const FGeometry& MyGeometry, const FAnalo
 	SCompoundWidget::OnAnalogValueChanged(MyGeometry, AnalogInputEvent);
 
 	// Get data
-	const FKey Key = AnalogInputEvent.GetKey();
-	FReply Result = FReply::Unhandled();
+	const FKey              Key           = AnalogInputEvent.GetKey();
+	FReply                  Result        = FReply::Unhandled();
 	TSharedPtr<SNovaButton> FocusedButton = GetFocusedButton();
 	TSharedPtr<SNovaButton> DestinationButton;
 
 	// Handle menu keys
 	if (CurrentNavigationPanel)
 	{
-		EUINavigation AnalogNavigation = EUINavigation::Invalid;
-		float CurrentInputPeriod = FMath::Lerp(AnalogNavMaxPeriod, AnalogNavMinPeriod,
-			(FMath::Abs(AnalogInputEvent.GetAnalogValue()) - AnalogNavThreshold) / (1.0f - AnalogNavThreshold));
+		EUINavigation AnalogNavigation   = EUINavigation::Invalid;
+		float         CurrentInputPeriod = FMath::Lerp(AnalogNavMaxPeriod, AnalogNavMinPeriod,
+            (FMath::Abs(AnalogInputEvent.GetAnalogValue()) - AnalogNavThreshold) / (1.0f - AnalogNavThreshold));
 
 		// Handle navigation
 		if (IsAxisKey(FNovaPlayerInput::MenuMoveHorizontal, Key))
@@ -192,23 +225,22 @@ FReply SNovaMenu::OnAnalogValueChanged(const FGeometry& MyGeometry, const FAnalo
 		// Update focus destination with a maximum period
 		if (AnalogNavigation != EUINavigation::Invalid && CurrentAnalogNavigationTime >= CurrentInputPeriod)
 		{
-			DestinationButton = GetNextButton(SharedThis(CurrentNavigationPanel), FocusedButton, CurrentNavigationButtons, AnalogNavigation);
+			DestinationButton =
+				GetNextButton(SharedThis(CurrentNavigationPanel), FocusedButton, CurrentNavigationButtons, AnalogNavigation);
 			if (DestinationButton.IsValid() && DestinationButton->SupportsKeyboardFocus())
 			{
 				SetFocusedButton(DestinationButton, true);
 
-				CurrentAnalogNavigation = AnalogNavigation;
+				CurrentAnalogNavigation     = AnalogNavigation;
 				CurrentAnalogNavigationTime = 0;
-				Result = FReply::Handled();
+				Result                      = FReply::Handled();
 			}
 		}
 	}
 
 	auto InputFilter = [&](float InputValue)
 	{
-		return FMath::Sign(InputValue)
-			* FMath::Max(FMath::Abs(InputValue) - AnalogNavThreshold, 0.0f)
-			/ (1.0f - AnalogNavThreshold);
+		return FMath::Sign(InputValue) * FMath::Max(FMath::Abs(InputValue) - AnalogNavThreshold, 0.0f) / (1.0f - AnalogNavThreshold);
 	};
 
 	// Read analog input from controller axis
@@ -229,8 +261,8 @@ FReply SNovaMenu::OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& KeyEve
 	SCompoundWidget::OnKeyDown(MyGeometry, KeyEvent);
 
 	// Get data
-	const FKey Key = KeyEvent.GetKey();
-	FReply Result = FReply::Unhandled();
+	const FKey              Key           = KeyEvent.GetKey();
+	FReply                  Result        = FReply::Unhandled();
 	TSharedPtr<SNovaButton> FocusedButton = GetFocusedButton();
 	TSharedPtr<SNovaButton> DestinationButton;
 
@@ -249,32 +281,26 @@ FReply SNovaMenu::OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& KeyEve
 		// Handle navigation
 		if (IsActionKey(FNovaPlayerInput::MenuUp, Key))
 		{
-			DestinationButton = GetNextButton(SharedThis(CurrentNavigationPanel), FocusedButton, CurrentNavigationButtons, EUINavigation::Up);
+			DestinationButton =
+				GetNextButton(SharedThis(CurrentNavigationPanel), FocusedButton, CurrentNavigationButtons, EUINavigation::Up);
 		}
 		else if (IsActionKey(FNovaPlayerInput::MenuDown, Key))
 		{
-			DestinationButton = GetNextButton(SharedThis(CurrentNavigationPanel), FocusedButton, CurrentNavigationButtons, EUINavigation::Down);
+			DestinationButton =
+				GetNextButton(SharedThis(CurrentNavigationPanel), FocusedButton, CurrentNavigationButtons, EUINavigation::Down);
 		}
 		else if (IsActionKey(FNovaPlayerInput::MenuLeft, Key))
 		{
-			DestinationButton = GetNextButton(SharedThis(CurrentNavigationPanel), FocusedButton, CurrentNavigationButtons, EUINavigation::Left);
+			DestinationButton =
+				GetNextButton(SharedThis(CurrentNavigationPanel), FocusedButton, CurrentNavigationButtons, EUINavigation::Left);
 		}
 		else if (IsActionKey(FNovaPlayerInput::MenuRight, Key))
 		{
-			DestinationButton = GetNextButton(SharedThis(CurrentNavigationPanel), FocusedButton, CurrentNavigationButtons, EUINavigation::Right);
+			DestinationButton =
+				GetNextButton(SharedThis(CurrentNavigationPanel), FocusedButton, CurrentNavigationButtons, EUINavigation::Right);
 		}
 
 		// Handle menu actions
-		else if (IsActionKey(FNovaPlayerInput::MenuPrimary, Key))
-		{
-			CurrentNavigationPanel->AbilityPrimary();
-			Result = FReply::Handled();
-		}
-		else if (IsActionKey(FNovaPlayerInput::MenuSecondary, Key))
-		{
-			CurrentNavigationPanel->AbilitySecondary();
-			Result = FReply::Handled();
-		}
 		else if (IsActionKey(FNovaPlayerInput::MenuZoomIn, Key))
 		{
 			CurrentNavigationPanel->ZoomIn();
@@ -304,6 +330,17 @@ FReply SNovaMenu::OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& KeyEve
 		}
 	}
 
+	// Trigger action buttons
+	for (TSharedPtr<SNovaButton>& Button : GetActionButtons())
+	{
+		if (Button->GetActionKey() == Key)
+		{
+			Button->OnButtonClicked();
+			Result = FReply::Handled();
+			break;
+		}
+	}
+
 	// Activate focused button
 	if (IsActionKey(FNovaPlayerInput::MenuConfirm, Key))
 	{
@@ -321,9 +358,8 @@ FReply SNovaMenu::OnKeyDown(const FGeometry& MyGeometry, const FKeyEvent& KeyEve
 	return Result;
 }
 
-
 /*----------------------------------------------------
-	Input handling
+    Input handling
 ----------------------------------------------------*/
 
 void SNovaMenu::UpdateKeyBindings()
@@ -358,22 +394,20 @@ bool SNovaMenu::IsAxisKey(FName AxisName, const FKey& Key) const
 	return AxisBindings.FindPair(Key.GetFName(), AxisName) != nullptr;
 }
 
-
 /*----------------------------------------------------
-	Focus handling
+    Focus handling
 ----------------------------------------------------*/
 
 void SNovaMenu::SetActiveNavigationPanel(SNovaNavigationPanel* Panel)
 {
-	NLOG("SNovaMenu::SetActiveNavigationPanel : '%s'",
-		Panel ? *Panel->GetTypeAsString() : TEXT("null"));
+	NLOG("SNovaMenu::SetActiveNavigationPanel : '%s'", Panel ? *Panel->GetTypeAsString() : TEXT("null"));
 
 	if (Panel != CurrentNavigationPanel)
 	{
 		NCHECK(CurrentNavigationButtons.Num() == 0);
 		NCHECK(CurrentNavigationPanel == nullptr);
 
-		CurrentNavigationPanel = Panel;
+		CurrentNavigationPanel   = Panel;
 		CurrentNavigationButtons = Panel->GetNavigationButtons();
 	}
 	else
@@ -392,8 +426,7 @@ void SNovaMenu::RefreshNavigationPanel()
 
 void SNovaMenu::ClearNavigationPanel()
 {
-	NLOG("SNovaMenu::ClearNavigationPanel : '%s'",
-		CurrentNavigationPanel ? *CurrentNavigationPanel->GetTypeAsString() : TEXT("nullptr"));
+	NLOG("SNovaMenu::ClearNavigationPanel : '%s'", CurrentNavigationPanel ? *CurrentNavigationPanel->GetTypeAsString() : TEXT("nullptr"));
 
 	for (TSharedPtr<SNovaButton> Button : CurrentNavigationButtons)
 	{
@@ -408,12 +441,7 @@ TSharedPtr<SNovaModalPanel> SNovaMenu::CreateModalPanel(SNovaNavigationPanel* Pa
 {
 	TSharedPtr<SNovaModalPanel> Panel;
 
-	MainOverlay->AddSlot()
-	[
-		SAssignNew(Panel, SNovaModalPanel)
-		.Menu(this)
-		.ParentPanel(ParentPanel)
-	];
+	MainOverlay->AddSlot()[SAssignNew(Panel, SNovaModalPanel).Menu(this).ParentPanel(ParentPanel)];
 
 	return Panel;
 }
@@ -453,10 +481,7 @@ TSharedPtr<SNovaButton> SNovaMenu::GetFocusedButton()
 }
 
 TSharedPtr<SNovaButton> SNovaMenu::GetNextButton(
-	TSharedRef<SWidget>              Widget,
-	TSharedPtr<const SWidget>        Current,
-	TArray<TSharedPtr<SNovaButton>> Candidates,
-	EUINavigation                    Direction)
+	TSharedRef<SWidget> Widget, TSharedPtr<const SWidget> Current, TArray<TSharedPtr<SNovaButton>> Candidates, EUINavigation Direction)
 {
 	if (Current)
 	{
@@ -475,10 +500,7 @@ TSharedPtr<SNovaButton> SNovaMenu::GetNextButton(
 }
 
 TSharedPtr<SNovaButton> SNovaMenu::GetNextButtonInternal(
-	TSharedRef<SWidget>              Widget,
-	TSharedPtr<const SWidget>        Current,
-	TArray<TSharedPtr<SNovaButton>> Candidates,
-	EUINavigation                    Direction)
+	TSharedRef<SWidget> Widget, TSharedPtr<const SWidget> Current, TArray<TSharedPtr<SNovaButton>> Candidates, EUINavigation Direction)
 {
 	FWidgetPath Source;
 	FWidgetPath Boundary;
@@ -486,11 +508,12 @@ TSharedPtr<SNovaButton> SNovaMenu::GetNextButtonInternal(
 	// Find the next widget in the required direction within the tab view
 	if (Current.IsValid())
 	{
-		if (FSlateApplication::Get().FindPathToWidget(Current.ToSharedRef(), Source) && FSlateApplication::Get().FindPathToWidget(Widget, Boundary))
+		if (FSlateApplication::Get().FindPathToWidget(Current.ToSharedRef(), Source) &&
+			FSlateApplication::Get().FindPathToWidget(Widget, Boundary))
 		{
-			FNavigationReply NavigationReply = FNavigationReply::Explicit(Widget);
-			const FArrangedWidget& SourceWidget = Source.Widgets.Last();
-			const FArrangedWidget& BoundaryWidget = Boundary.Widgets.Last();
+			FNavigationReply       NavigationReply = FNavigationReply::Explicit(Widget);
+			const FArrangedWidget& SourceWidget    = Source.Widgets.Last();
+			const FArrangedWidget& BoundaryWidget  = Boundary.Widgets.Last();
 
 			TSharedPtr<SWidget> DestinationWidget = Source.GetWindow()->GetHittestGrid().FindNextFocusableWidget(
 				SourceWidget, Direction, NavigationReply, BoundaryWidget, FSlateApplication::Get().CursorUserIndex);
@@ -508,6 +531,5 @@ TSharedPtr<SNovaButton> SNovaMenu::GetNextButtonInternal(
 
 	return TSharedPtr<SNovaButton>();
 }
-
 
 #undef LOCTEXT_NAMESPACE
