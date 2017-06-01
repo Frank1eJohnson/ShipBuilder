@@ -6,15 +6,19 @@
 #include "Nova/UI/NovaUITypes.h"
 #include "Nova/Nova.h"
 
-#include "Engine/Engine.h"
-
 #include "Widgets/Layout/SBackgroundBlur.h"
 
+
 /*----------------------------------------------------
-    Tab view content widget
+	Tab view content widget
 ----------------------------------------------------*/
 
-SNovaTabPanel::SNovaTabPanel() : SNovaNavigationPanel(), Blurred(false), TabIndex(0), CurrentVisible(false), CurrentAlpha(0)
+SNovaTabPanel::SNovaTabPanel()
+	: SNovaNavigationPanel()
+	, Blurred(false)
+	, TabIndex(0)
+	, CurrentVisible(false)
+	, CurrentAlpha(0)
 {}
 
 void SNovaTabPanel::Tick(const FGeometry& AllottedGeometry, const double CurrentTime, const float DeltaTime)
@@ -58,8 +62,8 @@ void SNovaTabPanel::Initialize(int32 Index, bool IsBlurred, TSharedPtr<SNovaTabV
 {
 	NCHECK(Parent.IsValid());
 
-	Blurred       = IsBlurred;
-	TabIndex      = Index;
+	Blurred = IsBlurred;
+	TabIndex = Index;
 	ParentTabView = Parent;
 }
 
@@ -74,7 +78,7 @@ void SNovaTabPanel::Show()
 void SNovaTabPanel::Hide()
 {
 	CurrentVisible = false;
-
+	
 	NCHECK(Menu);
 	Menu->ClearNavigationPanel();
 }
@@ -84,37 +88,25 @@ bool SNovaTabPanel::IsHidden() const
 	return (CurrentAlpha == 0);
 }
 
-TOptional<int32> SNovaTabPanel::GetBlurRadius() const
-{
-	const FNovaMainTheme& Theme = FNovaStyleSet::GetMainTheme();
-
-	float Alpha = FMath::InterpEaseInOut(0.0f, 1.0f, CurrentAlpha, ENovaUIConstants::EaseStandard);
-	return static_cast<int32>(Theme.BlurRadius * Alpha);
-}
-
-float SNovaTabPanel::GetBlurStrength() const
-{
-	const FNovaMainTheme& Theme = FNovaStyleSet::GetMainTheme();
-
-	float Alpha = FMath::InterpEaseInOut(0.0f, 1.0f, CurrentAlpha, ENovaUIConstants::EaseStandard);
-	return Theme.BlurStrength * Alpha;
-}
 
 /*----------------------------------------------------
-    Construct
+	Construct
 ----------------------------------------------------*/
 
-SNovaTabView::SNovaTabView() : DesiredTabIndex(0), CurrentTabIndex(0), CurrentBlurAlpha(0)
+SNovaTabView::SNovaTabView()
+	: DesiredTabIndex(0)
+	, CurrentTabIndex(0)
+	, CurrentBlurAlpha(0)
 {}
 
 void SNovaTabView::Construct(const FArguments& InArgs)
 {
 	// Data
-	SlotInfo                            = InArgs.Slots;
-	const FNovaMainTheme&   Theme       = FNovaStyleSet::GetMainTheme();
+	SlotInfo = InArgs.Slots;
+	const FNovaMainTheme& Theme = FNovaStyleSet::GetMainTheme();
 	const FNovaButtonTheme& ButtonTheme = FNovaStyleSet::GetButtonTheme();
 
-	// clang-format off
+	// Structure
 	ChildSlot
 	[
 		SNew(SOverlay)
@@ -148,72 +140,53 @@ void SNovaTabView::Construct(const FArguments& InArgs)
 				.BlurStrength(this, &SNovaTabView::GetHeaderBlurStrength)
 				.Padding(0)
 				[
-					SNew(SOverlay)
-
-					+ SOverlay::Slot()
+					SAssignNew(HeaderContainer, SBorder)
+					.BorderImage(&Theme.MainMenuBackground)
+					.Padding(0)
 					[
 						SNew(SVerticalBox)
-
+		
+						// Header buttons
 						+ SVerticalBox::Slot()
 						.AutoHeight()
+						.Padding(Theme.ContentPadding)
 						[
-							InArgs._BackgroundWidget.Widget
+							SNew(SHorizontalBox)
+				
+							+ SHorizontalBox::Slot()
+							.AutoWidth()
+							[
+								InArgs._LeftNavigation.Widget
+							]
+
+							+ SHorizontalBox::Slot()
+							.AutoWidth()
+							[
+								SAssignNew(Header, SHorizontalBox)
+							]
+				
+							+ SHorizontalBox::Slot()
+							.AutoWidth()
+							[
+								InArgs._RightNavigation.Widget
+							]
+
+							+ SHorizontalBox::Slot()
+				
+							+ SHorizontalBox::Slot()
+							.AutoWidth()
+							[
+								InArgs._End.Widget
+							]
 						]
 
+						// User-supplied header widget
 						+ SVerticalBox::Slot()
-					]
-					
-					+ SOverlay::Slot()
-					[
-						SAssignNew(HeaderContainer, SBorder)
-						.BorderImage(&Theme.MainMenuBackground)
+						.AutoHeight()
 						.Padding(0)
-						.Visibility(EVisibility::SelfHitTestInvisible)
+						.HAlign(HAlign_Center)
 						[
-							SNew(SVerticalBox)
-		
-							// Header buttons
-							+ SVerticalBox::Slot()
-							.AutoHeight()
-							.Padding(Theme.ContentPadding)
-							[
-								SNew(SHorizontalBox)
-				
-								+ SHorizontalBox::Slot()
-								.AutoWidth()
-								[
-									InArgs._LeftNavigation.Widget
-								]
-
-								+ SHorizontalBox::Slot()
-								.AutoWidth()
-								[
-									SAssignNew(Header, SHorizontalBox)
-								]
-				
-								+ SHorizontalBox::Slot()
-								.AutoWidth()
-								[
-									InArgs._RightNavigation.Widget
-								]
-
-								+ SHorizontalBox::Slot()
-				
-								+ SHorizontalBox::Slot()
-								.AutoWidth()
-								[
-									InArgs._End.Widget
-								]
-							]
-
-							// User-supplied header widget
-							+ SVerticalBox::Slot()
-							.AutoHeight()
-							.Padding(0)
-							.HAlign(HAlign_Center)
-							[
-								InArgs._Header.Widget
-							]
+							InArgs._Header.Widget
 						]
 					]
 				]
@@ -269,13 +242,11 @@ void SNovaTabView::Construct(const FArguments& InArgs)
 
 		Index++;
 	}
-
-	// clang-format on
-	SetVisibility(EVisibility::SelfHitTestInvisible);
 }
 
+
 /*----------------------------------------------------
-    Interaction
+	Interaction
 ----------------------------------------------------*/
 
 void SNovaTabView::Tick(const FGeometry& AllottedGeometry, const double CurrentTime, const float DeltaTime)
@@ -288,7 +259,7 @@ void SNovaTabView::Tick(const FGeometry& AllottedGeometry, const double CurrentT
 		for (int32 Index = 0; Index < SlotInfo.Num(); Index++)
 		{
 			int32 RelativeIndex = (Index / 2 + 1) * (Index % 2 != 0 ? 1 : -1);
-			RelativeIndex       = CurrentTabIndex + (RelativeIndex % SlotInfo.Num());
+			RelativeIndex = CurrentTabIndex + (RelativeIndex % SlotInfo.Num());
 
 			if (RelativeIndex >= 0 && IsTabVisible(RelativeIndex))
 			{
@@ -381,8 +352,9 @@ TSharedRef<SNovaTabPanel> SNovaTabView::GetCurrentTabContent() const
 	return SharedThis(Panels[CurrentTabIndex]);
 }
 
+
 /*----------------------------------------------------
-    Callbacks
+	Callbacks
 ----------------------------------------------------*/
 
 EVisibility SNovaTabView::GetTabVisibility(int32 Index) const
@@ -450,3 +422,4 @@ float SNovaTabView::GetHeaderBlurStrength() const
 
 	return IsBlurSplit() ? Theme.BlurStrength : 0;
 }
+

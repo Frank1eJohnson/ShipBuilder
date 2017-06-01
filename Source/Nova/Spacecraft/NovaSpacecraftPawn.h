@@ -7,6 +7,7 @@
 #include "NovaSpacecraft.h"
 #include "NovaSpacecraftPawn.generated.h"
 
+
 /** Current assembly state */
 enum class ENovaAssemblyState : uint8
 {
@@ -26,6 +27,7 @@ enum class ENovaAssemblyDisplayFilter : uint8
 	All
 };
 
+
 /** Main assembly actor that allows building boats */
 UCLASS(Config = Game, ClassGroup = (Nova))
 class ANovaSpacecraftPawn : public ANovaTurntablePawn
@@ -35,10 +37,19 @@ class ANovaSpacecraftPawn : public ANovaTurntablePawn
 	GENERATED_BODY()
 
 public:
+
 	ANovaSpacecraftPawn();
 
+
 	/*----------------------------------------------------
-	    Gameplay
+		Loading & saving
+	----------------------------------------------------*/
+
+	static void SerializeJson(TSharedPtr<FNovaSpacecraft>& SaveData, TSharedPtr<class FJsonObject>& JsonData, ENovaSerialize Direction);
+
+
+	/*----------------------------------------------------
+		Gameplay
 	----------------------------------------------------*/
 
 	virtual void Tick(float DeltaTime) override;
@@ -58,10 +69,10 @@ public:
 
 	/** Get a list of compartment kits that can be added at a (new) index */
 	TArray<const class UNovaCompartmentDescription*> GetCompatibleCompartments(int32 Index) const;
-
+	
 	/** get a list of compatible modules that can be added at a compartment index, and a module slot index */
 	TArray<const class UNovaModuleDescription*> GetCompatibleModules(int32 Index, int32 SlotIndex) const;
-
+	
 	/** get a list of compatible equipments that can be added at a compartment index, and an equipment slot index */
 	TArray<const class UNovaEquipmentDescription*> GetCompatibleEquipments(int32 Index, int32 SlotIndex) const;
 
@@ -69,7 +80,7 @@ public:
 	void SaveAssembly();
 
 	/** Store a copy of a spacecraft and start editing it */
-	void SetSpacecraft(const FNovaSpacecraft* NewSpacecraft);
+	void SetSpacecraft(const TSharedPtr<FNovaSpacecraft> NewSpacecraft);
 
 	/** Get the spacecraft movement component */
 	UFUNCTION(Category = Nova, BlueprintCallable)
@@ -90,6 +101,7 @@ public:
 		StartAssemblyUpdate();
 	}
 
+
 	/** Get a compartment */
 	FNovaCompartment& GetCompartment(int32 Index);
 
@@ -98,6 +110,7 @@ public:
 
 	/** Return which compartment index a primitive belongs to, or INDEX_NONE */
 	int32 GetCompartmentIndexByPrimitive(const class UPrimitiveComponent* Component);
+
 
 	/** Set this compartment to immediate mode (no animations or shader transitions) */
 	void SetImmediateMode(bool Value)
@@ -126,11 +139,13 @@ public:
 		CurrentHighlightCompartment = Index;
 	}
 
+
 	/*----------------------------------------------------
-	    Compartment assembly internals
+		Compartment assembly internals
 	----------------------------------------------------*/
 
 protected:
+
 	/** Update the assembly after a new compartment has been added or removed */
 	void StartAssemblyUpdate();
 
@@ -141,48 +156,58 @@ protected:
 	void UpdateDisplayFilter();
 
 	/** Create a new compartment component */
-	class UNovaSpacecraftCompartmentComponent* CreateCompartment(const FNovaCompartment& Compartment);
+	class UNovaSpacecraftCompartmentComponent* CreateCompartment(
+		const FNovaCompartment& Compartment);
 
 	/** Run a difference process on a compartment assembly and call Callback on elements needing updating */
-	void ProcessCompartmentIfDifferent(class UNovaSpacecraftCompartmentComponent* CompartmentComponent, const FNovaCompartment& Compartment,
+	void ProcessCompartmentIfDifferent(
+		class UNovaSpacecraftCompartmentComponent* CompartmentComponent,
+		const FNovaCompartment& Compartment,
 		FNovaAssemblyCallback Callback);
 
 	/** Run a list process on a compartment assembly and call Callback on all elements */
-	void ProcessCompartment(class UNovaSpacecraftCompartmentComponent* CompartmentComponent, const FNovaCompartment& Compartment,
+	void ProcessCompartment(
+		class UNovaSpacecraftCompartmentComponent* CompartmentComponent,
+		const FNovaCompartment& Compartment,
 		FNovaAssemblyCallback Callback);
 
 	/** Update the bounds */
 	void UpdateBounds();
+	
 
 	/*----------------------------------------------------
-	    Components
+		Components
 	----------------------------------------------------*/
 
 protected:
+
 	// Camera pitch scene container
 	UPROPERTY(Category = Nova, VisibleDefaultsOnly, BlueprintReadOnly)
 	class UNovaSpacecraftMovementComponent* MovementComponent;
 
+
 protected:
+
 	/*----------------------------------------------------
-	    Data
+		Data
 	----------------------------------------------------*/
 
 	// Assembly data
-	TSharedPtr<FNovaSpacecraft>                        Spacecraft;
-	ENovaAssemblyState                                 AssemblyState;
+	TSharedPtr<FNovaSpacecraft>                   Spacecraft;
+	ENovaAssemblyState                            AssemblyState;
 	TArray<class UNovaSpacecraftCompartmentComponent*> CompartmentComponents;
 
 	// Asset loading
-	bool                    WaitingAssetLoading;
-	TArray<FSoftObjectPath> CurrentAssets;
-	TArray<FSoftObjectPath> RequestedAssets;
+	bool                                          WaitingAssetLoading;
+	TArray<FSoftObjectPath>                       CurrentAssets;
+	TArray<FSoftObjectPath>                       RequestedAssets;
 
 	// Display state
-	int32                      CurrentHighlightCompartment;
-	ENovaAssemblyDisplayFilter DisplayFilterType;
-	int32                      DisplayFilterIndex;
-	FVector                    CurrentOrigin;
-	FVector                    CurrentExtent;
-	bool                       ImmediateMode;
+	int32                                         CurrentHighlightCompartment;
+	ENovaAssemblyDisplayFilter                    DisplayFilterType;
+	int32                                         DisplayFilterIndex;
+	FVector                                       CurrentOrigin;
+	FVector                                       CurrentExtent;
+	bool                                          ImmediateMode;
+
 };

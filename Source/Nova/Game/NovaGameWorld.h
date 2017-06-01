@@ -4,64 +4,17 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "Engine/NetSerialization.h"
 
 #include "NovaGameTypes.h"
 #include "Nova/Spacecraft/NovaSpacecraft.h"
 
 #include "NovaGameWorld.generated.h"
 
-/** Spacecraft database with fast array replication and fast lookup */
-USTRUCT()
-struct FNovaSpacecraftDatabase : public FFastArraySerializer
+/** Spacecraft database entry */
+struct FNovaSpacecraftDatabaseEntry
 {
-	GENERATED_BODY()
-
-	bool Add(const FNovaSpacecraft& Spacecraft)
-	{
-		return Cache.Add(*this, Array, Spacecraft);
-	}
-
-	void Remove(const FGuid& Identifier)
-	{
-		Cache.Remove(*this, Array, Identifier);
-	}
-
-	const FNovaSpacecraft* Get(const FGuid& Identifier) const
-	{
-		return Cache.Get(Identifier, Array);
-	}
-
-	TArray<FNovaSpacecraft>& Get()
-	{
-		return Array;
-	}
-
-	void UpdateCache()
-	{
-		Cache.Update(Array);
-	}
-
-	bool NetDeltaSerialize(FNetDeltaSerializeInfo& DeltaParms)
-	{
-		return FFastArraySerializer::FastArrayDeltaSerialize<FNovaSpacecraft, FNovaSpacecraftDatabase>(Array, DeltaParms, *this);
-	}
-
-protected:
-	UPROPERTY()
-	TArray<FNovaSpacecraft> Array;
-
-	TGuidCacheMap<FNovaSpacecraft> Cache;
-};
-
-/** Enable fast replication */
-template <>
-struct TStructOpsTypeTraits<FNovaSpacecraftDatabase> : public TStructOpsTypeTraitsBase2<FNovaSpacecraftDatabase>
-{
-	enum
-	{
-		WithNetDeltaSerializer = true,
-	};
+	TSharedPtr<FNovaSpacecraft> Spacecraft;
+	bool IsPlayer;
 };
 
 /** World manager class */
@@ -71,36 +24,40 @@ class ANovaGameWorld : public AActor
 	GENERATED_BODY()
 
 public:
+
 	ANovaGameWorld();
 
+
 	/*----------------------------------------------------
-	    Loading & saving
+		Loading & saving
 	----------------------------------------------------*/
 
 	TSharedPtr<struct FNovaWorldSave> Save() const;
 
 	void Load(TSharedPtr<struct FNovaWorldSave> SaveData);
 
-	static void SerializeJson(
-		TSharedPtr<struct FNovaWorldSave>& SaveData, TSharedPtr<class FJsonObject>& JsonData, ENovaSerialize Direction);
+	static void SerializeJson(TSharedPtr<struct FNovaWorldSave>& SaveData, TSharedPtr<class FJsonObject>& JsonData, ENovaSerialize Direction);
+
 
 	/*----------------------------------------------------
-	    Gameplay
+		Gameplay
 	----------------------------------------------------*/
 
 public:
-	virtual void Tick(float DeltaTime) override;
 
-	/** Get this actor */
-	static ANovaGameWorld* Get(const UObject* Outer);
+	/** Register a new AI spacecraft */
+	void AddAISpacecraft(const FNovaSpacecraft Spacecraft);
 
-	/** Register or update a spacecraft */
-	void UpdateSpacecraft(const FNovaSpacecraft Spacecraft, bool IsPlayerSpacecraft);
+	/** Register a new player spacecraft */
+	void AddPlayerSpacecraft(const FNovaSpacecraft Spacecraft);
 
-	/** Return a pointer for a spacecraft by identifier */
-	const FNovaSpacecraft* GetSpacecraft(FGuid Identifier)
+	/** Return a weak pointer for a spacecraft by identifier */
+	TSharedPtr<FNovaSpacecraft> GetSpacecraft(FGuid Identifier);
+
+	/** Get the spacecraft database */
+	TMap<FGuid, FNovaSpacecraftDatabaseEntry>& GetSpacecraftDatabase()
 	{
-		return SpacecraftDatabase.Get(Identifier);
+		return SpacecraftDatabase;
 	}
 
 	/** Return the orbital simulation class */
@@ -109,65 +66,48 @@ public:
 		return OrbitalSimulationComponent;
 	}
 
-	/** Get the current time dilation factor */
-	void SetTimeDilation(float Dilation);
-
-	/** Get the current game time in minutes */
-	double GetCurrentTime() const;
 
 	/*----------------------------------------------------
-	    Networking
-	----------------------------------------------------*/
-
-	/** Server replication event for time reconciliation */
-	UFUNCTION()
-	void OnServerTimeReplicated();
-
-	/*----------------------------------------------------
-	    Properties
-	----------------------------------------------------*/
-
-public:
-	// Threshold in seconds above which the client time starts compensating
-	UPROPERTY(Category = Nova, EditDefaultsOnly)
-	float MinimumTimeCorrectionThreshold;
-
-	// Threshold in seconds above which the client time is at maximum compensation
-	UPROPERTY(Category = Nova, EditDefaultsOnly)
-	float MaximumTimeCorrectionThreshold;
-
-	// Maximum time dilation applied to compensate time
-	UPROPERTY(Category = Nova, EditDefaultsOnly)
-	float TimeCorrectionFactor;
-
-	/*----------------------------------------------------
-	    Components
+		Internals
 	----------------------------------------------------*/
 
 protected:
+
+	/** Spacecraft data just replicated */
+	UFUNCTION()
+	void OnSpacecraftReplicated();
+
+	/** Update the local database */
+	void UpdateDatabase();
+
+
+	/*----------------------------------------------------
+		Components
+	----------------------------------------------------*/
+
+protected:
+
 	// Global orbital simulation manager
 	UPROPERTY(Category = Nova, VisibleDefaultsOnly, BlueprintReadOnly)
 	class UNovaOrbitalSimulationComponent* OrbitalSimulationComponent;
 
+
 	/*----------------------------------------------------
-	    Data
+		Data
 	----------------------------------------------------*/
 
 private:
-	// Replicated spacecraft database
-	UPROPERTY(Replicated)
-	FNovaSpacecraftDatabase SpacecraftDatabase;
 
-	// Replicated world time value
-	UPROPERTY(ReplicatedUsing = OnServerTimeReplicated)
-	double ServerTime;
+	// Spacecraft array
+	UPROPERTY(ReplicatedUsing=OnSpacecraftReplicated)
+	TArray<FNovaSpacecraft>                       AISpacecraft;
 
-	// Replicated world time dilation
-	UPROPERTY(Replicated)
-	float ServerTimeDilation;
+	// Spacecraft array for player ships
+	UPROPERTY(ReplicatedUsing = OnSpacecraftReplicated)
+	TArray<FNovaSpacecraft>                       PlayerSpacecraft;
 
 	// Local state
-	double                         ClientTime;
-	double                         ClientTimeDilation;
-	TArray<const class UNovaArea*> Areas;
+	TMap<FGuid, FNovaSpacecraftDatabaseEntry>     SpacecraftDatabase;
+	TArray<const class UNovaArea*>                Areas;
+
 };

@@ -1,24 +1,21 @@
 // Nova project - Gwennaël Arbona
 
 #include "NovaGameWorld.h"
-
-#include "NovaArea.h"
 #include "NovaAssetCatalog.h"
 #include "NovaGameInstance.h"
-#include "NovaGameState.h"
 #include "NovaOrbitalSimulationComponent.h"
-
-#include "Nova/Tools/NovaActorTools.h"
 #include "Nova/Nova.h"
 
 #include "EngineUtils.h"
 #include "Net/UnrealNetwork.h"
 
+
 /*----------------------------------------------------
-    Constructor
+	Constructor
 ----------------------------------------------------*/
 
-ANovaGameWorld::ANovaGameWorld() : Super(), ServerTime(0), ServerTimeDilation(1), ClientTime(0), ClientTimeDilation(0)
+ANovaGameWorld::ANovaGameWorld()
+	: Super()
 {
 	// Setup simulation component
 	OrbitalSimulationComponent = CreateDefaultSubobject<UNovaOrbitalSimulationComponent>(TEXT("OrbitalSimulationComponent"));
@@ -26,17 +23,13 @@ ANovaGameWorld::ANovaGameWorld() : Super(), ServerTime(0), ServerTimeDilation(1)
 	// Settings
 	bReplicates = true;
 	SetReplicatingMovement(false);
-	bAlwaysRelevant               = true;
+	bAlwaysRelevant = true;
 	PrimaryActorTick.bCanEverTick = true;
-
-	// Defaults
-	MinimumTimeCorrectionThreshold = 0.25f;
-	MaximumTimeCorrectionThreshold = 10.0f;
-	TimeCorrectionFactor           = 0.2f;
 }
 
+
 /*----------------------------------------------------
-    Loading & saving
+	Loading & saving
 ----------------------------------------------------*/
 
 struct FNovaWorldSave
@@ -45,158 +38,113 @@ struct FNovaWorldSave
 
 TSharedPtr<struct FNovaWorldSave> ANovaGameWorld::Save() const
 {
-	TSharedPtr<FNovaWorldSave> SaveData = MakeShared<FNovaWorldSave>();
+	TSharedPtr<FNovaWorldSave> SaveData = MakeShareable(new FNovaWorldSave);
 
 	return SaveData;
 }
 
 void ANovaGameWorld::Load(TSharedPtr<struct FNovaWorldSave> SaveData)
-{}
+{
+}
 
-void ANovaGameWorld::SerializeJson(
-	TSharedPtr<struct FNovaWorldSave>& SaveData, TSharedPtr<class FJsonObject>& JsonData, ENovaSerialize Direction)
-{}
+
+void ANovaGameWorld::SerializeJson(TSharedPtr<struct FNovaWorldSave>& SaveData, TSharedPtr<class FJsonObject>& JsonData, ENovaSerialize Direction)
+{
+}
+
 
 /*----------------------------------------------------
-    Gameplay
+	Gameplay
 ----------------------------------------------------*/
 
-void ANovaGameWorld::Tick(float DeltaTime)
+void ANovaGameWorld::AddAISpacecraft(const FNovaSpacecraft Spacecraft)
 {
-	Super::Tick(DeltaTime);
-
-	// Update spacecraft
-	SpacecraftDatabase.UpdateCache();
-	for (FNovaSpacecraft& Spacecraft : SpacecraftDatabase.Get())
-	{
-		Spacecraft.UpdateIfDirty();
-	}
-
-	// Process time
-	double DilatedDeltaTime = static_cast<double>(DeltaTime * ServerTimeDilation / 60.0);
-	if (GetLocalRole() == ROLE_Authority)
-	{
-		ServerTime += DilatedDeltaTime;
-	}
-	else
-	{
-		ClientTime += DilatedDeltaTime * ClientTimeDilation;
-	}
+	AISpacecraft.Add(Spacecraft);
+	UpdateDatabase();
 }
 
-ANovaGameWorld* ANovaGameWorld::Get(const UObject* Outer)
+void ANovaGameWorld::AddPlayerSpacecraft(const FNovaSpacecraft Spacecraft)
 {
-	ANovaGameState* GameState = Outer->GetWorld()->GetGameState<ANovaGameState>();
-	NCHECK(GameState);
-	ANovaGameWorld* GameWorld = GameState->GetGameWorld();
-	NCHECK(GameWorld);
-
-	return GameWorld;
+	PlayerSpacecraft.Add(Spacecraft);
+	UpdateDatabase();
 }
 
-void ANovaGameWorld::UpdateSpacecraft(const FNovaSpacecraft Spacecraft, bool IsPlayerSpacecraft)
+TSharedPtr<FNovaSpacecraft> ANovaGameWorld::GetSpacecraft(FGuid Identifier)
 {
-	NCHECK(GetLocalRole() == ROLE_Authority);
+	FNovaSpacecraftDatabaseEntry* Entry = SpacecraftDatabase.Find(Identifier);
+	return Entry ? Entry->Spacecraft : nullptr;
+}
 
-	NLOG("ANovaGameWorld::UpdateSpacecraft");
 
-	bool IsNew = SpacecraftDatabase.Add(Spacecraft);
+/*----------------------------------------------------
+	Internals
+----------------------------------------------------*/
 
-	if (IsNew)
+void ANovaGameWorld::OnSpacecraftReplicated()
+{
+	// TODO : use custom net serializer to make all of that a non issue
+
+	UpdateDatabase();
+}
+
+void ANovaGameWorld::UpdateDatabase()
+{
+	NLOG("ANovaGameWorld::UpdateDatabase");
+
+	TArray<FGuid> KnownIdentifiers;
+
+	// Database insertion and update
+	auto UpdateDatabaseFromArray = [this, &KnownIdentifiers](const TArray<FNovaSpacecraft>& Array, bool IsPlayer)
 	{
-		// Attempt orbit merging for player spacecraft joining the game
-		bool HasMergedOrbits = false;
-		if (IsPlayerSpacecraft)
+		for (const FNovaSpacecraft& Spacecraft : Array)
 		{
-			ANovaGameState* GameState = GetWorld()->GetGameState<ANovaGameState>();
-			NCHECK(GameState);
-			const FNovaOrbit* CurrentOrbit = OrbitalSimulationComponent->GetPlayerOrbit();
+			FNovaSpacecraftDatabaseEntry* Entry = SpacecraftDatabase.Find(Spacecraft.Identifier);
 
-			if (CurrentOrbit)
+			// Entry was found, update if necessary
+			if (Entry)
 			{
-				OrbitalSimulationComponent->MergeOrbit(GameState->GetPlayerSpacecraftIdentifiers(), MakeShared<FNovaOrbit>(*CurrentOrbit));
-				HasMergedOrbits = true;
+				if (*Entry->Spacecraft.Get() != Spacecraft)
+				{
+					Entry->Spacecraft = Spacecraft.GetSharedCopy();
+				}
+			}
+
+			// Entry was not found, add it
+			else
+			{
+				FNovaSpacecraftDatabaseEntry NewEntry;
+				NewEntry.IsPlayer = IsPlayer;
+				NewEntry.Spacecraft = Spacecraft.GetSharedCopy();
+				SpacecraftDatabase.Add(Spacecraft.Identifier, NewEntry);
+			}
+
+			KnownIdentifiers.Add(Spacecraft.Identifier);
+		}
+	};
+
+	// Database garbage collection
+	auto PruneDatabase = [this, &KnownIdentifiers]()
+	{
+		for(auto Iterator = SpacecraftDatabase.CreateIterator(); Iterator; ++Iterator)
+		{
+			if (!KnownIdentifiers.Contains(Iterator.Key()))
+			{
+				Iterator.RemoveCurrent();
 			}
 		}
+	};
 
-		// Load a default
-		if (!HasMergedOrbits)
-		{
-			// TODO : should first look into deserialized save data, and then if nothing, fetch the default location from game mode
-
-			const class UNovaArea* StationA =
-				GetGameInstance<UNovaGameInstance>()->GetCatalog()->GetAsset<UNovaArea>(FGuid("{3F74954E-44DD-EE5C-404A-FC8BF3410826}"));
-#if 0
-			OrbitalSimulationComponent->SetOrbit(
-				{Spacecraft.Identifier}, MakeShared<FNovaOrbit>(FNovaOrbitGeometry(StationA->Planet, 300, 200, 0, 360), 0));
-#else
-			OrbitalSimulationComponent->SetOrbit({Spacecraft.Identifier}, OrbitalSimulationComponent->GetAreaOrbit(StationA));
-#endif
-		}
-	}
-}
-
-void ANovaGameWorld::SetTimeDilation(float Dilation)
-{
-	NCHECK(GetLocalRole() == ROLE_Authority);
-	NCHECK(Dilation >= 0);
-
-	ServerTimeDilation = Dilation;
-}
-
-double ANovaGameWorld::GetCurrentTime() const
-{
-	if (GetLocalRole() == ROLE_Authority)
-	{
-		return ServerTime;
-	}
-	else
-	{
-		return ClientTime;
-	}
-}
-
-/*----------------------------------------------------
-    Networking
-----------------------------------------------------*/
-
-void ANovaGameWorld::OnServerTimeReplicated()
-{
-	const APlayerController* PC = GetGameInstance()->GetFirstLocalPlayerController();
-	NCHECK(PC);
-
-	// Evaluate the current server time
-	const double PingSeconds      = UNovaActorTools::GetPlayerLatency(PC);
-	const double RealServerTime   = ServerTime + PingSeconds / 60.0;
-	const double TimeDeltaSeconds = (RealServerTime - ClientTime) * 60.0 / ServerTimeDilation;
-
-	// We can never go back in time
-	NCHECK(TimeDeltaSeconds > -MaximumTimeCorrectionThreshold);
-
-	// Hard correct if the change is large
-	if (TimeDeltaSeconds > MaximumTimeCorrectionThreshold)
-	{
-		NLOG("ANovaGameWorld::OnServerTimeReplicated : time rollback from %.2f to %.2f", ClientTime, RealServerTime);
-		ClientTime         = RealServerTime;
-		ClientTimeDilation = 1.0;
-	}
-
-	// Smooth correct if it isn't
-	else
-	{
-		const float TimeDeltaRatio = FMath::Clamp(
-			(TimeDeltaSeconds - MinimumTimeCorrectionThreshold) / (MaximumTimeCorrectionThreshold - MinimumTimeCorrectionThreshold), 0.0,
-			1.0);
-
-		ClientTimeDilation = 1.0 + TimeDeltaRatio * TimeCorrectionFactor * FMath::Sign(TimeDeltaSeconds);
-	}
+	// Run the insertion and update process, then collect the garbage
+	UpdateDatabaseFromArray(AISpacecraft, false);
+	UpdateDatabaseFromArray(PlayerSpacecraft, true);
+	PruneDatabase();
 }
 
 void ANovaGameWorld::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(ANovaGameWorld, SpacecraftDatabase);
-	DOREPLIFETIME(ANovaGameWorld, ServerTime);
-	DOREPLIFETIME(ANovaGameWorld, ServerTimeDilation);
-};
+	DOREPLIFETIME(ANovaGameWorld, AISpacecraft);
+	DOREPLIFETIME(ANovaGameWorld, PlayerSpacecraft);
+}
+;

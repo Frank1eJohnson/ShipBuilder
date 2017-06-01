@@ -3,115 +3,113 @@
 #pragma once
 
 #include "Nova/UI/NovaUI.h"
-#include "Nova/Game/NovaGameTypes.h"
-#include "Nova/Game/NovaOrbitalSimulationComponent.h"
 
 #include "Widgets/SCompoundWidget.h"
 
+
 /*----------------------------------------------------
-    Internal structures
+	Internal structures
 ----------------------------------------------------*/
 
-/** Batched data for drawing a spline */
-struct FNovaBatchedSpline
+/** Geometry of an orbit on the map */
+struct FNovaSplineOrbit
 {
-	bool operator==(const FNovaBatchedSpline& Other) const
+	FNovaSplineOrbit(const FVector2D& Orig, float R)
+		: Origin(Orig)
+		, Width(R)
+		, Height(R)
+		, Phase(0)
+		, InitialAngle(0)
+		, AngularLength(360)
+		, OriginOffset(0)
+	{}
+
+	FNovaSplineOrbit(const FVector2D& Orig, float W, float H, float P)
+		: FNovaSplineOrbit(Orig, W)
 	{
-		return P0 == Other.P0 && P1 == Other.P1 && P2 == Other.P2 && P3 == Other.P3 && ColorInner == Other.ColorInner &&
-			   ColorOuter == Other.ColorOuter && WidthInner == Other.WidthInner && WidthOuter == Other.WidthOuter;
+		Height = H;
+		Phase = P;
 	}
 
-	FVector2D    P0;
-	FVector2D    P1;
-	FVector2D    P2;
-	FVector2D    P3;
+	FNovaSplineOrbit(const FVector2D& Orig, float W, float H, float P, float Initial, float Length, float Offset)
+		: FNovaSplineOrbit(Orig, W, H, P)
+	{
+		InitialAngle = Initial;
+		AngularLength = Length;
+		OriginOffset = Offset;
+	}
+
+	FVector2D Origin;
+	float Width;
+	float Height;
+	float Phase;
+	float InitialAngle;
+	float AngularLength;
+	float OriginOffset;
+};
+
+/** Orbit drawing style */
+struct FNovaSplineStyle
+{
+	FNovaSplineStyle()
+		: ColorInner(FLinearColor::White)
+		, ColorOuter(FLinearColor::Black)
+		, WidthInner(1.0f)
+		, WidthOuter(2.0f)
+	{}
+
+	FNovaSplineStyle(const FLinearColor& Color)
+		: FNovaSplineStyle()
+	{
+		ColorInner = Color;
+		ColorOuter = Color;
+	}
+
 	FLinearColor ColorInner;
 	FLinearColor ColorOuter;
-	float        WidthInner;
-	float        WidthOuter;
+	float WidthInner;
+	float WidthOuter;
+};
+
+/** Orbit drawing results */
+struct FNovaSplineResults
+{
+	FVector2D InitialPosition;
+	FVector2D FinalPosition;
+	TArray<FVector2D> PointsOfInterest;
 };
 
 /** Batched data for drawing a point */
 struct FNovaBatchedPoint
 {
-	bool operator==(const FNovaBatchedPoint& Other) const
-	{
-		return Pos == Other.Pos && Color == Other.Color && Radius == Other.Radius;
-	}
-
-	FVector2D    Pos;
+	FVector2D Pos;
 	FLinearColor Color;
-	float        Radius;
+	float Radius;
 };
 
-/** Batched data for drawing a quad */
-struct FNovaBatchedBrush
+/** Batched data for drawing a spline */
+struct FNovaBatchedSpline
 {
-	bool operator==(const FNovaBatchedBrush& Other) const
-	{
-		return Pos == Other.Pos && Brush == Other.Brush;
-	}
-
-	FVector2D          Pos;
-	const FSlateBrush* Brush;
+	FVector2D P0;
+	FVector2D P1;
+	FVector2D P2;
+	FVector2D P3;
+	FLinearColor ColorInner;
+	FLinearColor ColorOuter;
+	float WidthInner;
+	float WidthOuter;
 };
 
-/** Batched data for drawing a text */
-struct FNovaBatchedText
-{
-	FVector2D              Pos;
-	FText                  Text;
-	const FTextBlockStyle* TextStyle;
-};
-
-/** Point of interest on the map */
-struct FNovaOrbitalObject
-{
-	FNovaOrbitalObject() : Area(nullptr), Spacecraft(nullptr), Maneuver(nullptr), Positioned(false)
-	{}
-
-	FNovaOrbitalObject(const class UNovaArea* A, float P) : FNovaOrbitalObject()
-	{
-		Area  = A;
-		Phase = P;
-	}
-
-	FNovaOrbitalObject(const struct FNovaSpacecraft* S, float P) : FNovaOrbitalObject()
-	{
-		Spacecraft = S;
-		Phase      = P;
-	}
-
-	FNovaOrbitalObject(const FNovaManeuver& M) : FNovaOrbitalObject()
-	{
-		Maneuver = MakeShared<FNovaManeuver>(M);
-		Phase    = M.Phase;
-	}
-
-	FText GetText(double CurrentTime) const;
-
-	// Object data
-	const class UNovaArea*        Area;
-	const struct FNovaSpacecraft* Spacecraft;
-	TSharedPtr<FNovaManeuver>     Maneuver;
-
-	// Generated data
-	float Phase;
-
-	// Positioning
-	bool      Positioned;
-	FVector2D Position;
-};
 
 /*----------------------------------------------------
-    Orbital map
+	Orbital map
 ----------------------------------------------------*/
 
 /** Orbital map drawer */
 class SNovaOrbitalMap : public SCompoundWidget
 {
 	/*----------------------------------------------------
-	    Slate arguments
+		Slate arguments
 	----------------------------------------------------*/
 
 	SLATE_BEGIN_ARGS(SNovaOrbitalMap)
@@ -122,83 +120,45 @@ class SNovaOrbitalMap : public SCompoundWidget
 	SLATE_END_ARGS()
 
 public:
-	SNovaOrbitalMap();
 
 	void Construct(const FArguments& InArgs);
 
+
 	/*----------------------------------------------------
-	    Interface
+		Inherited
 	----------------------------------------------------*/
+
+public:
 
 	virtual void Tick(const FGeometry& AllottedGeometry, const double CurrentTime, const float DeltaTime) override;
 
-	/** Preview a spacecraft trajectory */
-	void Set(const TSharedPtr<struct FNovaTrajectory>& Trajectory, bool Immediate = false);
+	virtual int32 OnPaint(const FPaintArgs& PaintArgs, const FGeometry& AllottedGeometry, const FSlateRect& MyCullingRect,
+		FSlateWindowElementList& OutDrawElements, int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const override;
 
-	/** Remove the trajectory preview */
-	void ClearTrajectoryPreview()
-	{
-		CurrentPreviewTrajectory.Reset();
-	}
 
-	/** Get the preview trajectory */
-	const TSharedPtr<struct FNovaTrajectory>& GetPreviewTrajectory() const
-	{
-		return CurrentPreviewTrajectory;
-	}
-
-protected:
 	/*----------------------------------------------------
-	    High-level internals
+		Internals
 	----------------------------------------------------*/
 
-	/** Add orbits to the map */
-	void ProcessAreas(const FVector2D& Origin);
-
-	/** Add player orbit to the map */
-	void ProcessSpacecraftOrbits(const FVector2D& Origin);
-
-	/** Add player trajectory to the map */
-	void ProcessPlayerTrajectory(const FVector2D& Origin);
-
-	/** Add the trajectory preview */
-	void ProcessTrajectoryPreview(const FVector2D& Origin, float DeltaTime);
-
-	/** Update the draw scale */
-	void ProcessDrawScale(float DeltaTime);
-
 protected:
-	/*----------------------------------------------------
-	   Slate callbacks
-	----------------------------------------------------*/
 
-	FText GetHoverText() const;
+	/** Draw a full circular orbit around Origin of Radius */
+	TArray<FVector2D> AddCircularOrbit(const FVector2D& Origin, float Radius,
+		const TArray<float>& PointsOfInterest, const FNovaSplineStyle& Style);
 
-protected:
-	/*----------------------------------------------------
-	    Map drawing implementation
-	----------------------------------------------------*/
+	/** Draw a partial circular orbit around Origin of Radius, starting at Phase over AngularLength */
+	TArray<FVector2D> AddPartialCircularOrbit(const FVector2D& Origin, float Radius, float Phase, float InitialAngle, float AngularLength,
+		const TArray<float>& PointsOfInterest, const FNovaSplineStyle& Style);
 
-	/** Draw a planet */
-	void AddPlanet(const FVector2D& Pos, const class UNovaPlanet* Planet);
+	/** Draw a Hohmann transfer orbit around Origin from RadiusA to RadiusB, starting at Phase */
+	TArray<FVector2D> AddTransferOrbit(const FVector2D& Origin, float RadiusA, float RadiusB, float Phase, float InitialAngle,
+		const TArray<float>& PointsOfInterest, const FNovaSplineStyle& Style);
 
-	/** Draw a trajectory */
-	void AddTrajectory(const FVector2D& Position, const struct FNovaTrajectory& Trajectory, const struct FNovaSplineStyle& Style,
-		const struct FNovaSpacecraft* Spacecraft = nullptr, float Progress = 1.0f);
+	/** Draw an orbit or partial orbit */
+	FNovaSplineResults AddOrbit(const FNovaSplineOrbit& Orbit, const TArray<float>& PointsOfInterest, const FNovaSplineStyle& Style);
 
-	/** Draw an orbit */
-	TPair<FVector2D, FVector2D> AddOrbit(const FVector2D& Position, const FNovaOrbitGeometry& Geometry, TArray<FNovaOrbitalObject>& Objects,
-		const struct FNovaSplineStyle& Style, float InitialPhase = 0.0f);
-
-	/** Draw an orbit based on processed 2D parameters */
-	TPair<FVector2D, FVector2D> AddOrbitInternal(
-		const struct FNovaSplineOrbit& Orbit, TArray<FNovaOrbitalObject>& Objects, const struct FNovaSplineStyle& Style);
-
-	/** Draw an interactive orbital object on the map */
-	void AddOrbitalObject(const FNovaOrbitalObject& Object, const FLinearColor& Color);
-
-	/** Add test orbits */
-	void AddTestOrbits();
+	/** Draw a single point on the map */
+	void AddPoint(const FVector2D& Pos, const FLinearColor& Color, float Radius = 4.0f);
 
 	/** Interpolate a spline, returning the point at Alpha (0-1) over the spline defined by P0..P3 */
 	static FVector2D DeCasteljauInterp(const FVector2D& P0, const FVector2D& P1, const FVector2D& P2, const FVector2D& P3, float Alpha)
@@ -207,8 +167,7 @@ protected:
 	};
 
 	/** Return the control points for the two splines created when cutting the spline defined by P0..P3 at Alpha (0-1) */
-	static TArray<FVector2D> DeCasteljauSplit(
-		const FVector2D& P0, const FVector2D& P1, const FVector2D& P2, const FVector2D& P3, float Alpha)
+	static TArray<FVector2D> DeCasteljauSplit(const FVector2D& P0, const FVector2D& P1, const FVector2D& P2, const FVector2D& P3, float Alpha)
 	{
 		const float InvAlpha = 1.0f - Alpha;
 
@@ -221,47 +180,21 @@ protected:
 
 		const FVector2D R = InvAlpha * P + Alpha * Q;
 
-		return {P0, L, P, R, Q, N, P3};
+		return { P0, L, P, R, Q, N , P3 };
 	};
 
-	/*----------------------------------------------------
-	    Batch renderer
-	----------------------------------------------------*/
-
-	/** Remove all drawing elements */
-	void ClearBatches();
-
-	virtual int32 OnPaint(const FPaintArgs& PaintArgs, const FGeometry& AllottedGeometry, const FSlateRect& MyCullingRect,
-		FSlateWindowElementList& OutDrawElements, int32 LayerId, const FWidgetStyle& InWidgetStyle, bool bParentEnabled) const override;
 
 	/*----------------------------------------------------
-	    Data
+		Data
 	----------------------------------------------------*/
 
 protected:
-	// Settings
-	TWeakObjectPtr<UNovaMenuManager> MenuManager;
-	float                            TrajectoryPreviewDuration;
-	float                            TrajectoryZoomSpeed;
-	float                            TrajectoryZoomAcceleration;
-	float                            TrajectoryZoomSnappinness;
-	float                            TrajectoryInflationRatio;
 
-	// Local state
-	FVector2D                          CurrentOrigin;
-	TSharedPtr<struct FNovaTrajectory> CurrentPreviewTrajectory;
-	float                              CurrentPreviewProgress;
-	float                              CurrentDesiredSize;
-	float                              CurrentDrawScale;
-	float                              CurrentZoomSpeed;
-
-	// Object text system
-	TArray<FString> DesiredObjectTexts;
-	TArray<FString> CurrentObjectTexts;
+	// Menu manager
+	TWeakObjectPtr<UNovaMenuManager>              MenuManager;
 
 	// Batching system
-	TArray<FNovaBatchedSpline> BatchedSplines;
-	TArray<FNovaBatchedPoint>  BatchedPoints;
-	TArray<FNovaBatchedBrush>  BatchedBrushes;
-	TArray<FNovaBatchedText>   BatchedTexts;
+	TArray<FNovaBatchedPoint>                     BatchedPoints;
+	TArray<FNovaBatchedSpline>                    BatchedSplines;
+
 };

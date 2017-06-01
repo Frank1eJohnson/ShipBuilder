@@ -19,22 +19,26 @@
 #include "GameFramework/InputSettings.h"
 #include "Engine/Engine.h"
 
+
 #define LOCTEXT_NAMESPACE "SNovaMainMenuSettings"
 
+
 /*----------------------------------------------------
-    Constructor
+	Constructor
 ----------------------------------------------------*/
 
 void SNovaMainMenuSettings::Construct(const FArguments& InArgs)
 {
 	// Data
 	const FNovaMainTheme& Theme = FNovaStyleSet::GetMainTheme();
-	MenuManager                 = InArgs._MenuManager;
+	MenuManager = InArgs._MenuManager;
 
 	// Parent constructor
-	SNovaNavigationPanel::Construct(SNovaNavigationPanel::FArguments().Menu(InArgs._Menu));
+	SNovaNavigationPanel::Construct(SNovaNavigationPanel::FArguments()
+		.Menu(InArgs._Menu)
+	);
 
-	// clang-format off
+	// Structure
 	ChildSlot
 	[
 		SAssignNew(MainContainer, SScrollBox)
@@ -91,16 +95,6 @@ void SNovaMainMenuSettings::Construct(const FArguments& InArgs)
 				[
 					SAssignNew(GameplayContainer, SVerticalBox)
 				]
-
-				+ SVerticalBox::Slot()
-				.AutoHeight()
-				[
-					SNovaAssignNew(CrashReportButton, SNovaButton)
-					.Toggle(true)
-					.Text(LOCTEXT("EnableCrashReport", "Enable crash reports"))
-					.HelpText(LOCTEXT("EnableCrashReportHelp", "Send anonymous debugging information to Deimos Games when the game crashes"))
-					.OnClicked(this, &SNovaMainMenuSettings::OnCrashReportToggled)
-				]
 			]
 
 			// Video settings panel
@@ -124,13 +118,14 @@ void SNovaMainMenuSettings::Construct(const FArguments& InArgs)
 				+ SVerticalBox::Slot()
 				.AutoHeight()
 				[
-					SNovaNew(SNovaButton)
+					SNew(SNovaButton) // No navigation
 					.Text(LOCTEXT("ApplyResolution", "Apply video settings"))
 					.HelpText(LOCTEXT("ApplyResolutionHelp", "Apply the currently selected resolution & screen mode"))
 					.Action(FNovaPlayerInput::MenuPrimary)
 					.OnClicked(this, &SNovaMainMenuSettings::OnApplyVideoSettings)
 					.Enabled(this, &SNovaMainMenuSettings::IsApplyVideoSettingsEnabled)
 					.Visibility(this, &SNovaMainMenuSettings::GetPCVisibility)
+					.Focusable(false)
 				]
 
 				+ SVerticalBox::Slot()
@@ -326,7 +321,7 @@ void SNovaMainMenuSettings::Construct(const FArguments& InArgs)
 	TArray<FCultureRef> CultureRefList = FInternationalization::Get().GetAvailableCultures(CultureNames, false);
 	for (FCultureRef Culture : CultureRefList)
 	{
-		CultureList.Add(MakeShared<FString>(Culture->GetName()));
+		CultureList.Add(MakeShareable(new FString(Culture->GetName())));
 	}
 
 	// Build gameplay options
@@ -413,11 +408,11 @@ void SNovaMainMenuSettings::Construct(const FArguments& InArgs)
 
 		ModalPanel = Menu->CreateModalPanel(this);
 	}
-	// clang-format on
 }
 
+
 /*----------------------------------------------------
-    Interaction
+	Interaction
 ----------------------------------------------------*/
 
 void SNovaMainMenuSettings::Show()
@@ -438,7 +433,7 @@ void SNovaMainMenuSettings::Show()
 
 		RaytracedShadowsButton->SetActive(GameUserSettings->EnableRaytracedShadows);
 		RaytracedAOutton->SetActive(GameUserSettings->EnableRaytracedAO);
-		// RaytracedReflectionsButton->SetActive(GameUserSettings->EnableRaytracedReflections);
+		//RaytracedReflectionsButton->SetActive(GameUserSettings->EnableRaytracedReflections);
 		SSGIButton->SetActive(GameUserSettings->EnableSSGI);
 		CinematicBloomButton->SetActive(GameUserSettings->EnableCinematicBloom);
 
@@ -478,8 +473,17 @@ TSharedPtr<SNovaButton> SNovaMainMenuSettings::GetDefaultFocusButton() const
 	}
 }
 
+void SNovaMainMenuSettings::AbilityPrimary()
+{
+	if (IsApplyVideoSettingsEnabled())
+	{
+		OnApplyVideoSettings();
+	}
+}
+
+
 /*----------------------------------------------------
-    Input management
+	Input management
 ----------------------------------------------------*/
 
 void SNovaMainMenuSettings::OnKeyBindingChanged(FKey PreviousKey, FKey NewKey, TSharedPtr<FNovaKeyBinding> Binding)
@@ -513,13 +517,17 @@ void SNovaMainMenuSettings::OnKeyBindingChanged(FKey PreviousKey, FKey NewKey, T
 		}
 
 		FText ConflictDetailsText = FText::FormatNamed(LOCTEXT("ConflictDetailsText",
-														   "'{original}' is already used for {new}. Do you want to assign this key to "
-														   "'{binding}' only, ignore the conflict, or cancel the assignment?"),
-			TEXT("original"), FText::FromString(NewKey.ToString()), TEXT("new"), ConflictKeys, TEXT("binding"), Binding->GetBindingName());
+			"'{original}' is already used for {new}. Do you want to assign this key to '{binding}' only, ignore the conflict, or cancel the assignment?"),
+			TEXT("original"),
+			FText::FromString(NewKey.ToString()),
+			TEXT("new"),
+			ConflictKeys,
+			TEXT("binding"),
+			Binding->GetBindingName());
 
 		ModalPanel->Show(LOCTEXT("ConfirmKeyConflict", "Key already in use"), ConflictDetailsText,
-			FSimpleDelegate::CreateSP(this, &SNovaMainMenuSettings::ApplyNewBinding, Binding, true),
-			FSimpleDelegate::CreateSP(this, &SNovaMainMenuSettings::ApplyNewBinding, Binding, false),
+			FSimpleDelegate::CreateSP(this, &SNovaMainMenuSettings::ApplyNewBinding,  Binding, true),
+			FSimpleDelegate::CreateSP(this, &SNovaMainMenuSettings::ApplyNewBinding,  Binding, false),
 			FSimpleDelegate::CreateSP(this, &SNovaMainMenuSettings::CancelNewBinding, Binding, PreviousKey));
 	}
 	else
@@ -570,8 +578,7 @@ void SNovaMainMenuSettings::CancelNewBinding(TSharedPtr<struct FNovaKeyBinding> 
 	BindingThatChanged->SetKey(PreviousKey);
 }
 
-bool SNovaMainMenuSettings::IsAlreadyUsed(
-	TArray<TSharedPtr<FNovaKeyBinding>>& BindConflicts, FKey Key, TSharedPtr<FNovaKeyBinding> ExcludeBinding)
+bool SNovaMainMenuSettings::IsAlreadyUsed(TArray<TSharedPtr<FNovaKeyBinding>>& BindConflicts, FKey Key, TSharedPtr<FNovaKeyBinding> ExcludeBinding)
 {
 	for (TSharedPtr<FNovaKeyBinding> Bind : Bindings)
 	{
@@ -584,8 +591,9 @@ bool SNovaMainMenuSettings::IsAlreadyUsed(
 	return BindConflicts.Num() > 0;
 }
 
+
 /*----------------------------------------------------
-    Video management
+	Video management
 ----------------------------------------------------*/
 
 TSharedPtr<SNovaSlider> SNovaMainMenuSettings::AddSettingSlider(TSharedPtr<SVerticalBox> Container, FText Text, FText HelpText,
@@ -593,7 +601,6 @@ TSharedPtr<SNovaSlider> SNovaMainMenuSettings::AddSettingSlider(TSharedPtr<SVert
 {
 	const FNovaMainTheme& Theme = FNovaStyleSet::GetMainTheme();
 
-	// clang-format off
 	TSharedPtr<SNovaSlider> Slider = SNew(SNovaSlider)
 		.Panel(this)
 		.MinValue(MinValue)
@@ -624,7 +631,6 @@ TSharedPtr<SNovaSlider> SNovaMainMenuSettings::AddSettingSlider(TSharedPtr<SVert
 			Slider.ToSharedRef()
 		]
 	];
-	// clang-format on
 
 	return Slider;
 }
@@ -633,7 +639,7 @@ void SNovaMainMenuSettings::UpdateResolutionList()
 {
 	// Initialize buttons
 	LastConfirmedVideoResolution = GameUserSettings->GetLastConfirmedScreenResolution();
-	LastConfirmedFullscreenMode  = GameUserSettings->GetLastConfirmedFullscreenMode();
+	LastConfirmedFullscreenMode = GameUserSettings->GetLastConfirmedFullscreenMode();
 	FullscreenButton->SetActive(LastConfirmedFullscreenMode != EWindowMode::Windowed);
 	VSyncButton->SetActive(GameUserSettings->IsVSyncEnabled());
 	HDRButton->SetActive(IsHDRSupported() && GameUserSettings->IsHDREnabled());
@@ -642,7 +648,7 @@ void SNovaMainMenuSettings::UpdateResolutionList()
 	ResolutionList.Empty();
 	SelectedResolution.Reset();
 	FScreenResolutionArray Resolutions;
-	FIntPoint              CurrentResolution = GEngine->GameViewport->Viewport->GetSizeXY();
+	FIntPoint CurrentResolution = GEngine->GameViewport->Viewport->GetSizeXY();
 	if (RHIGetAvailableResolutions(Resolutions, true))
 	{
 		for (const FScreenResolutionRHI& Resolution : Resolutions)
@@ -664,6 +670,16 @@ void SNovaMainMenuSettings::UpdateResolutionList()
 		NERR("SNovaMainMenuSettings::Show : screen resolutions could not be obtained");
 	}
 
+	// Fallback
+	if (!SelectedResolution.IsValid())
+	{
+		FScreenResolutionRHI Resolution;
+		Resolution.Width = CurrentResolution.X;
+		Resolution.Height = CurrentResolution.Y;
+		SelectedResolution = MakeShareable(new FScreenResolutionRHI(Resolution));
+		ResolutionList.AddUnique(SelectedResolution);
+	}
+
 	// Update list
 	ResolutionListView->Refresh(ResolutionList.Find(SelectedResolution));
 }
@@ -672,18 +688,18 @@ void SNovaMainMenuSettings::UpdateResolution(FIntPoint Resolution, bool Fullscre
 {
 	// Apply settings
 	LastConfirmedVideoResolution = GameUserSettings->GetLastConfirmedScreenResolution();
-	LastConfirmedFullscreenMode  = GameUserSettings->GetLastConfirmedFullscreenMode();
+	LastConfirmedFullscreenMode = GameUserSettings->GetLastConfirmedFullscreenMode();
 	GameUserSettings->SetScreenResolution(Resolution);
 	GameUserSettings->SetFullscreenMode(Fullscreen ? EWindowMode::Fullscreen : EWindowMode::Windowed);
 	GameUserSettings->ApplyResolutionSettings(true);
 
-	NLOG("SNovaMainMenuSettings::UpdateResolution : new resolution is %s, fullscreen %d", *Resolution.ToString(),
-		FullscreenButton->IsActive());
-
+	NLOG("SNovaMainMenuSettings::UpdateResolution : new resolution is %s, fullscreen %d", *Resolution.ToString(), FullscreenButton->IsActive());
+	
 	// Confirm
 	ModalPanel->Show(LOCTEXT("ConfirmResolution", "Confirm video settings ?"),
 		LOCTEXT("ConfirmResolutionHelp", "Do you want to confirm and save the new video settings, or revert the changes ?"),
-		FSimpleDelegate::CreateSP(this, &SNovaMainMenuSettings::ApplyVideoSettings), FSimpleDelegate(),
+		FSimpleDelegate::CreateSP(this, &SNovaMainMenuSettings::ApplyVideoSettings),
+		FSimpleDelegate(),
 		FSimpleDelegate::CreateSP(this, &SNovaMainMenuSettings::RevertVideoSettings));
 }
 
@@ -711,8 +727,9 @@ void SNovaMainMenuSettings::RevertVideoSettings()
 	UpdateResolutionList();
 }
 
+
 /*----------------------------------------------------
-    Callbacks (main)
+	Callbacks (main)
 ----------------------------------------------------*/
 
 EVisibility SNovaMainMenuSettings::GetPCVisibility() const
@@ -727,19 +744,13 @@ bool SNovaMainMenuSettings::IsRaytracingSupported() const
 
 bool SNovaMainMenuSettings::IsHDRSupported() const
 {
-	return GameUserSettings->GetFullscreenMode() == EWindowMode::Fullscreen && GameUserSettings->SupportsHDRDisplayOutput() &&
-		   IsHDRAllowed();
+	return GameUserSettings->GetFullscreenMode() == EWindowMode::Fullscreen
+		&& GameUserSettings->SupportsHDRDisplayOutput() && IsHDRAllowed();
 }
 
 void SNovaMainMenuSettings::OnFOVChanged(float Value)
 {
 	GameUserSettings->FOV = Value;
-	GameUserSettings->SaveSettings();
-}
-
-void SNovaMainMenuSettings::OnCrashReportToggled()
-{
-	GameUserSettings->EnableCrashReports = CrashReportButton->IsActive();
 	GameUserSettings->SaveSettings();
 }
 
@@ -815,16 +826,16 @@ void SNovaMainMenuSettings::OnCinematicBloomToggled()
 	GameUserSettings->SaveSettings();
 }
 
+
 /*----------------------------------------------------
-    Callbacks (culture)
+	Callbacks (culture)
 ----------------------------------------------------*/
 
 TSharedRef<SWidget> SNovaMainMenuSettings::GenerateCultureItem(TSharedPtr<FString> Culture)
 {
-	const FNovaMainTheme&   Theme       = FNovaStyleSet::GetMainTheme();
+	const FNovaMainTheme& Theme = FNovaStyleSet::GetMainTheme();
 	const FNovaButtonTheme& ButtonTheme = FNovaStyleSet::GetButtonTheme();
 
-	// clang-format off
 	return SNew(SHorizontalBox)
 
 		+ SHorizontalBox::Slot()
@@ -849,13 +860,12 @@ TSharedRef<SWidget> SNovaMainMenuSettings::GenerateCultureItem(TSharedPtr<FStrin
 			.TextStyle(&Theme.MainFont)
 			.Text(GetCultureName(Culture))
 		];
-	// clang-format on
 }
 
 FText SNovaMainMenuSettings::GetCultureName(TSharedPtr<FString> Culture) const
 {
 	FCulturePtr CulturePtr = FInternationalization::Get().GetCulture(*Culture);
-	FString     NativeName = CulturePtr->GetNativeName();
+	FString NativeName = CulturePtr->GetNativeName();
 	return FText::FromString(NativeName.Left(1).ToUpper() + NativeName.RightChop(1));
 }
 
@@ -866,11 +876,12 @@ const FSlateBrush* SNovaMainMenuSettings::GetCultureIcon(TSharedPtr<FString> Cul
 
 FText SNovaMainMenuSettings::GenerateCultureTooltip(TSharedPtr<FString> Culture)
 {
-	FCulturePtr CulturePtr   = FInternationalization::Get().GetCulture(*Culture);
-	FString     NativeName   = CulturePtr->GetNativeName();
-	FText       LanguageText = FText::FromString(NativeName.Left(1).ToUpper() + NativeName.RightChop(1));
+	FCulturePtr CulturePtr = FInternationalization::Get().GetCulture(*Culture);
+	FString NativeName = CulturePtr->GetNativeName();
+	FText LanguageText = FText::FromString(NativeName.Left(1).ToUpper() + NativeName.RightChop(1));
 
-	return FText::FormatNamed(LOCTEXT("CultureHelp", "Set the game language to {language}"), TEXT("language"), LanguageText);
+	return FText::FormatNamed(LOCTEXT("CultureHelp", "Set the game language to {language}"),
+		TEXT("language"), LanguageText);
 }
 
 void SNovaMainMenuSettings::OnSelectedCultureChanged(TSharedPtr<FString> Culture, int32 Index)
@@ -890,16 +901,16 @@ void SNovaMainMenuSettings::OnApplyCultureSettings()
 	GConfig->Flush(false, GEditorSettingsIni);
 }
 
+
 /*----------------------------------------------------
-    Callbacks (video)
+	Callbacks (video)
 ----------------------------------------------------*/
 
 TSharedRef<SWidget> SNovaMainMenuSettings::GenerateResolutionItem(TSharedPtr<FScreenResolutionRHI> Resolution)
 {
-	const FNovaMainTheme&   Theme       = FNovaStyleSet::GetMainTheme();
+	const FNovaMainTheme& Theme = FNovaStyleSet::GetMainTheme();
 	const FNovaButtonTheme& ButtonTheme = FNovaStyleSet::GetButtonTheme();
 
-	// clang-format off
 	return SNew(SHorizontalBox)
 
 		+ SHorizontalBox::Slot()
@@ -925,7 +936,6 @@ TSharedRef<SWidget> SNovaMainMenuSettings::GenerateResolutionItem(TSharedPtr<FSc
 			.TextStyle(&Theme.MainFont)
 			.Text(GetResolutionName(Resolution))
 		];
-	// clang-format on
 }
 
 FText SNovaMainMenuSettings::GetResolutionName(TSharedPtr<struct FScreenResolutionRHI> Resolution) const
@@ -942,7 +952,8 @@ FText SNovaMainMenuSettings::GenerateResolutionTooltip(TSharedPtr<FScreenResolut
 {
 	FText ResolutionText = FText::FromString(FString::FromInt(Resolution->Width) + TEXT("x") + FString::FromInt(Resolution->Height));
 
-	return FText::FormatNamed(LOCTEXT("ResolutionHelp", "Set the resolution to {resolution}"), TEXT("resolution"), ResolutionText);
+	return FText::FormatNamed(LOCTEXT("ResolutionHelp", "Set the resolution to {resolution}"),
+		TEXT("resolution"), ResolutionText);
 }
 
 void SNovaMainMenuSettings::OnSelectedResolutionChanged(TSharedPtr<FScreenResolutionRHI> Resolution, int32 Index)
@@ -954,12 +965,15 @@ void SNovaMainMenuSettings::OnSelectedResolutionChanged(TSharedPtr<FScreenResolu
 bool SNovaMainMenuSettings::IsApplyVideoSettingsEnabled() const
 {
 	bool IsFullscreen = LastConfirmedFullscreenMode != EWindowMode::Windowed;
-	bool IsVsync      = GameUserSettings->IsVSyncEnabled();
-	bool IsHDR        = GameUserSettings->IsHDREnabled();
+	bool IsVsync = GameUserSettings->IsVSyncEnabled();
+	bool IsHDR = GameUserSettings->IsHDREnabled();
 
-	return ((SelectedResolution.IsValid() && (SelectedResolution->Width != LastConfirmedVideoResolution.X ||
-												 SelectedResolution->Height != LastConfirmedVideoResolution.Y)) ||
-			FullscreenButton->IsActive() != IsFullscreen || VSyncButton->IsActive() != IsVsync || HDRButton->IsActive() != IsHDR);
+	return ((SelectedResolution.IsValid()
+			&& (SelectedResolution->Width != LastConfirmedVideoResolution.X
+			|| SelectedResolution->Height != LastConfirmedVideoResolution.Y))
+		|| FullscreenButton->IsActive() != IsFullscreen
+		|| VSyncButton->IsActive() != IsVsync
+		|| HDRButton->IsActive() != IsHDR);
 }
 
 void SNovaMainMenuSettings::OnApplyVideoSettings()
@@ -978,5 +992,6 @@ void SNovaMainMenuSettings::OnApplyVideoSettings()
 	GameUserSettings->ApplySettings(false);
 	GameUserSettings->SaveSettings();
 }
+
 
 #undef LOCTEXT_NAMESPACE

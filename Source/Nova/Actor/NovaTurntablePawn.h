@@ -7,6 +7,7 @@
 
 #include "NovaTurntablePawn.generated.h"
 
+
 /** Camera control pawn for turntable menus */
 UCLASS(ClassGroup = (Nova))
 class ANovaTurntablePawn : public APawn
@@ -14,10 +15,12 @@ class ANovaTurntablePawn : public APawn
 	GENERATED_BODY()
 
 public:
+
 	ANovaTurntablePawn();
 
+
 	/*----------------------------------------------------
-	    Gameplay
+		Gameplay
 	----------------------------------------------------*/
 
 	virtual void BeginPlay() override;
@@ -42,19 +45,23 @@ public:
 	/** Zoom out of the actor */
 	void ZoomOut();
 
+
 	/*----------------------------------------------------
-	    Internals
+		Internals
 	----------------------------------------------------*/
 
 protected:
+
 	/** Apply the pan & tilt inputs to the camera */
 	virtual void ProcessCamera(float DeltaTime);
 
+
 	/*----------------------------------------------------
-	    Properties
+		Properties
 	----------------------------------------------------*/
 
 public:
+
 	// Time in seconds for camera distance interpolation
 	UPROPERTY(Category = Nova, EditDefaultsOnly)
 	float AnimationDuration;
@@ -74,6 +81,7 @@ public:
 	// Distance factor stepping value
 	UPROPERTY(Category = Nova, EditDefaultsOnly)
 	float DistanceFactorIncrement;
+
 
 	// Minimum allowed tilt in degrees (down)
 	UPROPERTY(Category = Nova, EditDefaultsOnly)
@@ -102,12 +110,14 @@ public:
 	// Power function applied to inputs
 	UPROPERTY(Category = Nova, EditDefaultsOnly)
 	float CameraInputPower;
+	
 
 	/*----------------------------------------------------
-	    Components
+		Components
 	----------------------------------------------------*/
 
 protected:
+
 	// Camera pitch scene container
 	UPROPERTY(Category = Nova, VisibleDefaultsOnly, BlueprintReadOnly)
 	class USceneComponent* CameraPitchComponent;
@@ -124,24 +134,27 @@ protected:
 	UPROPERTY(Category = Nova, VisibleDefaultsOnly, BlueprintReadOnly)
 	class UCameraComponent* Camera;
 
+
 protected:
+
 	/*----------------------------------------------------
-	    Data
+		Data
 	----------------------------------------------------*/
 
 	// Input data
-	float CurrentPanTarget;
-	float CurrentTiltTarget;
-	float CurrentPanAngle;
-	float CurrentTiltAngle;
-	float CurrentPanSpeed;
-	float CurrentTiltSpeed;
+	float                                         CurrentPanTarget;
+	float                                         CurrentTiltTarget;
+	float                                         CurrentPanAngle;
+	float                                         CurrentTiltAngle;
+	float                                         CurrentPanSpeed;
+	float                                         CurrentTiltSpeed;
 
 	// Animation data
-	float CurrentOffset;
-	float PreviousOffset;
-	float CurrentDistance;
-	float CurrentDistanceFactor;
-	float PreviousDistance;
-	float CurrentAnimationTime;
+	float                                         CurrentOffset;
+	float                                         PreviousOffset;
+	float                                         CurrentDistance;
+	float                                         CurrentDistanceFactor;
+	float                                         PreviousDistance;
+	float                                         CurrentAnimationTime;
+
 };

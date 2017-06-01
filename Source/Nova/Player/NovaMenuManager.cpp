@@ -17,22 +17,27 @@
 #include "Engine/Console.h"
 #include "Engine.h"
 
+
 // Statics
-UNovaMenuManager* UNovaMenuManager::Singleton    = nullptr;
-bool              UNovaMenuManager::UsingGamepad = false;
+UNovaMenuManager* UNovaMenuManager::Singleton = nullptr;
+bool UNovaMenuManager::UsingGamepad = false;
+
 
 /*----------------------------------------------------
-    Constructor
+	Constructor
 ----------------------------------------------------*/
 
-UNovaMenuManager::UNovaMenuManager() : Super(), CurrentMenuState(ENovaFadeState::FadingFromBlack)
+UNovaMenuManager::UNovaMenuManager()
+	: Super()
+	, CurrentMenuState(ENovaFadeState::FadingFromBlack)
 {
 	// Settings
 	FadeDuration = ENovaUIConstants::FadeDurationLong;
 }
 
+
 /*----------------------------------------------------
-    Inherited
+	Inherited
 ----------------------------------------------------*/
 
 class FNovaNavigationConfig : public FNavigationConfig
@@ -57,9 +62,9 @@ void UNovaMenuManager::Initialize(UNovaGameInstance* NewGameInstance)
 {
 	NLOG("UNovaMenuManager::Initialize");
 
-	Singleton    = this;
+	Singleton = this;
 	GameInstance = NewGameInstance;
-	FSlateApplication::Get().SetNavigationConfig(MakeShared<FNovaNavigationConfig>());
+	FSlateApplication::Get().SetNavigationConfig(MakeShareable(new FNovaNavigationConfig()));
 }
 
 void UNovaMenuManager::BeginPlay(ANovaPlayerController* PC)
@@ -77,53 +82,50 @@ void UNovaMenuManager::BeginPlay(ANovaPlayerController* PC)
 		GameViewportClient->AddViewportWidgetContent(SNew(SWeakWidget).PossiblyNullContent(Overlay.ToSharedRef()), 100);
 	}
 
-	// Check for maximized state at boot
-	TSharedPtr<SWindow> Window = FSlateApplication::Get().GetTopLevelWindows()[0];
-	NCHECK(Window);
-	FVector2D ViewportResolution = Window->GetViewportSize();
-	FIntPoint DesktopResolution  = GEngine->GetGameUserSettings()->GetDesktopResolution();
-	if (!Window->IsWindowMaximized() && ViewportResolution.X == DesktopResolution.X && ViewportResolution.Y != DesktopResolution.Y)
-	{
-		Window->Maximize();
-	}
-
 	// Initialize
-	CurrentMenuState    = ENovaFadeState::FadingFromBlack;
-	CurrentFadingTime   = FadeDuration;
+	CurrentMenuState = ENovaFadeState::FadingFromBlack;
+	CurrentFadingTime = FadeDuration;
 	LoadingScreenFrozen = false;
 	Menu->UpdateKeyBindings();
 
 	// Open the menu if desired
 	RunWaitAction(ENovaLoadingScreen::Black,
-		FNovaAsyncAction::CreateLambda(
-			[=]()
+		FNovaAsyncAction::CreateLambda([=]()
+		{
+			NLOG("UNovaMenuManager::BeginPlay : setting up menu");
+
+			if (Cast<ANovaWorldSettings>(GetWorld()->GetWorldSettings())->IsMenuMap())
 			{
-				NLOG("UNovaMenuManager::BeginPlay : setting up menu");
+				Menu->Show();
+				SetFocusToMenu();
+			}
+			else
+			{
+				Menu->Hide();
+				SetFocusToGame();
+			}
 
-				if (Cast<ANovaWorldSettings>(GetWorld()->GetWorldSettings())->IsMenuMap())
-				{
-					Menu->Show();
-					SetFocusToMenu();
-				}
-				else
-				{
-					Menu->Hide();
-					SetFocusToGame();
-				}
-
-				NLOG("UNovaMenuManager::BeginPlay : waiting for a bit");
-			}),
-		FNovaAsyncCondition::CreateLambda(
-			[=]()
+			NLOG("UNovaMenuManager::BeginPlay : waiting for a bit");
+		}),
+		FNovaAsyncCondition::CreateLambda([=]()
+		{
+			// Wait a bit to ensure assets have some time to load
+			if (GetPC() && GetPC()->GetGameTimeSinceCreation() > 1.0f)
 			{
 				NLOG("UNovaMenuManager::BeginPlay : done");
 				return true;
-			}));
+			}
+			else
+			{
+				return false;
+			}
+		})
+	);
 }
 
 void UNovaMenuManager::Tick(float DeltaTime)
 {
-	if (GetPC() && GetPC()->IsReady() && GetPC()->GetGameTimeSinceCreation() > 1.0f)
+	if (GetPC() && GetPC()->IsReady())
 	{
 		switch (CurrentMenuState)
 		{
@@ -205,22 +207,24 @@ void UNovaMenuManager::Tick(float DeltaTime)
 
 	// Update focus when it's one of our widgets to another of our widgets
 	TSharedPtr<class SWidget> CurrentFocusWidget = FSlateApplication::Get().GetUserFocusedWidget(0);
-	if (DesiredFocusWidget.IsValid() && CurrentFocusWidget != DesiredFocusWidget && AllowedFocusObjects.Contains(CurrentFocusWidget) &&
-		AllowedFocusObjects.Contains(DesiredFocusWidget))
+	if (DesiredFocusWidget.IsValid() && CurrentFocusWidget != DesiredFocusWidget
+		&& AllowedFocusObjects.Contains(CurrentFocusWidget)
+		&& AllowedFocusObjects.Contains(DesiredFocusWidget))
 	{
 		NLOG("UNovaMenuManager::Tick : moving focus from '%s' to '%s'",
-			CurrentFocusWidget.IsValid() ? *CurrentFocusWidget->GetTypeAsString() : TEXT("null"), *DesiredFocusWidget->GetTypeAsString());
+			CurrentFocusWidget.IsValid() ? *CurrentFocusWidget->GetTypeAsString() : TEXT("null"),
+			*DesiredFocusWidget->GetTypeAsString());
 
 		FSlateApplication::Get().SetAllUserFocus(DesiredFocusWidget.ToSharedRef());
 	}
 }
 
+
 /*----------------------------------------------------
-    Menu management
+	Menu management
 ----------------------------------------------------*/
 
-void UNovaMenuManager::RunWaitAction(
-	ENovaLoadingScreen LoadingScreen, FNovaAsyncAction Action, FNovaAsyncCondition Condition, bool ShortFade)
+void UNovaMenuManager::RunWaitAction(ENovaLoadingScreen LoadingScreen, FNovaAsyncAction Action, FNovaAsyncCondition Condition, bool ShortFade)
 {
 	NLOG("UNovaMenuManager::RunWaitAction");
 
@@ -232,13 +236,12 @@ void UNovaMenuManager::RunWaitAction(
 
 void UNovaMenuManager::RunAction(ENovaLoadingScreen LoadingScreen, FNovaAsyncAction Action, bool ShortFade)
 {
-	RunWaitAction(LoadingScreen, Action,
-		FNovaAsyncCondition::CreateLambda(
-			[=]()
-			{
-				return false;
-			}),
-		ShortFade);
+	RunWaitAction(LoadingScreen, Action, FNovaAsyncCondition::CreateLambda([=]()
+		{
+			return false;
+		}),
+		ShortFade
+	);
 }
 
 void UNovaMenuManager::CompleteAsyncAction()
@@ -254,35 +257,35 @@ void UNovaMenuManager::OpenMenu(FNovaAsyncAction Action, FNovaAsyncCondition Con
 	NLOG("UNovaMenuManager::OpenMenu");
 
 	RunWaitAction(ENovaLoadingScreen::Black,
-		FNovaAsyncAction::CreateLambda(
-			[=]()
+		FNovaAsyncAction::CreateLambda([=]()
+		{
+			if (Menu.IsValid())
 			{
-				if (Menu.IsValid())
-				{
-					Action.ExecuteIfBound();
-					Menu->Show();
-					SetFocusToMenu();
-				}
-			}),
-		Condition);
+				Action.ExecuteIfBound();
+				Menu->Show();
+				SetFocusToMenu();
+			}
+		}),
+		Condition
+	);
 }
 
 void UNovaMenuManager::CloseMenu(FNovaAsyncAction Action, FNovaAsyncCondition Condition)
 {
 	NLOG("UNovaMenuManager::CloseMenu");
-
+	
 	RunWaitAction(ENovaLoadingScreen::Black,
-		FNovaAsyncAction::CreateLambda(
-			[=]()
+		FNovaAsyncAction::CreateLambda([=]()
+		{
+			if (Menu.IsValid())
 			{
-				if (Menu.IsValid())
-				{
-					Action.ExecuteIfBound();
-					Menu->Hide();
-					SetFocusToGame();
-				}
-			}),
-		Condition);
+				Action.ExecuteIfBound();
+				Menu->Hide();
+				SetFocusToGame();
+			}
+		}),
+		Condition
+	);
 }
 
 bool UNovaMenuManager::IsMenuOpen() const
@@ -323,8 +326,9 @@ void UNovaMenuManager::HideTooltip(SWidget* TargetWidget)
 	}
 }
 
+
 /*----------------------------------------------------
-    Menu tools
+	Menu tools
 ----------------------------------------------------*/
 
 UNovaMenuManager* UNovaMenuManager::Get()
@@ -362,7 +366,7 @@ void UNovaMenuManager::SetFocusToMenu()
 void UNovaMenuManager::SetFocusToOverlay()
 {
 	NLOG("UNovaMenuManager::SetFocusToOverlay");
-
+	
 	if (!IsUsingGamepad())
 	{
 		GetPC()->SetInputMode(FInputModeUIOnly());
@@ -428,19 +432,4 @@ FKey UNovaMenuManager::GetFirstActionKey(FName ActionName) const
 	}
 
 	return FKey(NAME_None);
-}
-
-void UNovaMenuManager::MaximizeOrRestore()
-{
-	TSharedPtr<SWindow> Window = FSlateApplication::Get().GetTopLevelWindows()[0];
-	NCHECK(Window);
-
-	if (!Window->IsWindowMaximized())
-	{
-		Window->Maximize();
-	}
-	else
-	{
-		Window->Restore();
-	}
 }

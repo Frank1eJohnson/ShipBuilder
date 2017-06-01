@@ -5,8 +5,9 @@
 #include "CoreMinimal.h"
 #include "NovaActorTools.generated.h"
 
+
 /*----------------------------------------------------
-    Helper class
+	Helper class
 ----------------------------------------------------*/
 
 UCLASS(ClassGroup = (Nova))
@@ -15,6 +16,7 @@ class UNovaActorTools : public UObject
 	GENERATED_BODY()
 
 public:
+
 	/** Sort actors from closest to farthest from location */
 	static void SortActorsByClosestDistance(TArray<AActor*>& Actors, const FVector& BaseLocation);
 
@@ -22,28 +24,31 @@ public:
 	static void SortComponentsByClosestDistance(TArray<USceneComponent*>& Components, const FVector& BaseLocation);
 
 	/** Get half of the ping time in seconds for this player */
-	static float GetPlayerLatency(const class APlayerController* PC);
+	static float GetPlayerLatency(class APlayerController* PC);
 
 	/** Get half of the ping time in seconds for this player */
-	static float GetPlayerLatency(const class APlayerState* PC);
+	static float GetPlayerLatency(class APlayerState* PC);
 
 	/** Apply collision effects on velocity */
-	static FVector GetVelocityCollisionResponse(
-		const FVector& Velocity, const FHitResult& Hit, float BaseRestitution = 1.0f, const FVector& WorldUp = FVector(0, 0, 1));
+	static FVector GetVelocityCollisionResponse(const FVector& Velocity, const FHitResult& Hit,
+		float BaseRestitution = 1.0f, const FVector& WorldUp = FVector(0, 0, 1));
 
 	/** Play a camera shake with linear attenuation */
 	static void PlayCameraShake(TSubclassOf<class UCameraShakeBase> Shake, class AActor* Owner, float Scale = 1.0f,
 		float AttenuationStartDistance = 300, float AttenuationDistance = 5000);
+
 };
 
+
 /*----------------------------------------------------
-    Time-based moving average structure
+	Time-based moving average structure
 ----------------------------------------------------*/
 
-template <class T>
+template<class T>
 struct TNovaTimedAverage
 {
 public:
+
 	TNovaTimedAverage()
 	{
 		SetPeriod(1.0f);
@@ -52,7 +57,7 @@ public:
 	void SetPeriod(float New)
 	{
 		Period = New;
-
+		
 		Update();
 	}
 
@@ -88,7 +93,7 @@ public:
 	void Update()
 	{
 		// Trim values that exceed the time
-		float TotalTime     = 0;
+		float TotalTime = 0;
 		int32 ValidElements = 0;
 		for (TPair<float, T> Entry : Values)
 		{
@@ -113,7 +118,7 @@ public:
 		if (Values.Num() > 0)
 		{
 			float SizeDivider = 1.0f / Values.Num();
-			Average           = Total * SizeDivider;
+			Average = Total * SizeDivider;
 		}
 		else
 		{
@@ -122,13 +127,15 @@ public:
 	}
 
 private:
-	T                       Average;
-	TArray<TPair<float, T>> Values;
-	float                   Period;
+
+	T                         Average;
+	TArray<TPair<float, T>>   Values;
+	float                     Period;
 };
 
+
 /*----------------------------------------------------
-    Location interpolator
+	Location interpolator
 ----------------------------------------------------*/
 
 struct FNovaMovementInterpolator
@@ -144,15 +151,17 @@ struct FNovaMovementInterpolator
 	void Get(FVector& OutLocation, FVector& OutVelocity, float Time) const;
 
 protected:
+
 	FVector StartLocation;
-	FQuat   StartRotation;
+	FQuat StartRotation;
 	FVector StartDerivative;
 	FVector StartAngularDerivative;
 
 	FVector TargetLocation;
-	FQuat   TargetRotation;
+	FQuat TargetRotation;
 	FVector TargetDerivative;
 	FVector TargetAngularDerivative;
 
 	float InterpolationDuration;
 };
+

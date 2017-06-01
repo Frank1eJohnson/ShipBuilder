@@ -9,16 +9,15 @@
 
 #include "NovaSplineMeshComponent.generated.h"
 
+
 /** Modified spline mesh component that supports dynamic materials */
 UCLASS(ClassGroup = (Nova), meta = (BlueprintSpawnableComponent))
-class UNovaSplineMeshComponent
-	: public USplineMeshComponent
-	, public INovaMeshInterface
-	, public FNovaMeshInterfaceBehavior
+class UNovaSplineMeshComponent : public USplineMeshComponent, public INovaMeshInterface, public FNovaMeshInterfaceBehavior
 {
 	GENERATED_BODY()
 
 public:
+
 	UNovaSplineMeshComponent()
 	{
 		PrimaryComponentTick.bCanEverTick = true;
@@ -26,7 +25,7 @@ public:
 	}
 
 	/*----------------------------------------------------
-	    Inherited
+		Inherited
 	----------------------------------------------------*/
 
 	virtual void BeginPlay() override
@@ -83,4 +82,5 @@ public:
 	{
 		FNovaMeshInterfaceBehavior::RequestParameter(Name, Value, Immediate);
 	}
+
 };

@@ -6,8 +6,9 @@
 
 #include "Engine/Engine.h"
 
+
 /*----------------------------------------------------
-    Public methods
+	Public methods
 ----------------------------------------------------*/
 
 void UNovaAssetDescription::UpdateAssetRender()

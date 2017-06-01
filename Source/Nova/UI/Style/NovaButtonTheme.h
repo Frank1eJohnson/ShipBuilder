@@ -6,6 +6,7 @@
 #include "Slate/SlateGameResources.h"
 #include "NovaButtonTheme.generated.h"
 
+
 /** Theme structure storing visual elements of a button */
 USTRUCT()
 struct FNovaButtonTheme : public FSlateWidgetStyle
@@ -13,11 +14,11 @@ struct FNovaButtonTheme : public FSlateWidgetStyle
 	GENERATED_BODY()
 
 	/*----------------------------------------------------
-	    Interface
+		Interface
 	----------------------------------------------------*/
 
 	static const FName TypeName;
-	const FName        GetTypeName() const override
+	const FName GetTypeName() const override
 	{
 		return TypeName;
 	}
@@ -34,8 +35,9 @@ struct FNovaButtonTheme : public FSlateWidgetStyle
 		OutBrushes.Add(&Background);
 	}
 
+
 	/*----------------------------------------------------
-	    Data
+		Data
 	----------------------------------------------------*/
 
 	UPROPERTY(EditDefaultsOnly, Category = Button) FTextBlockStyle MainFont;
@@ -45,6 +47,7 @@ struct FNovaButtonTheme : public FSlateWidgetStyle
 	UPROPERTY(EditDefaultsOnly, Category = Button) FSlateBrush Border;
 	UPROPERTY(EditDefaultsOnly, Category = Button) FSlateBrush Background;
 	UPROPERTY(EditDefaultsOnly, Category = Button) FLinearColor DisabledColor;
+
 };
 
 /** Theme structure storing dimensional elements of a button */
@@ -54,11 +57,11 @@ struct FNovaButtonSize : public FSlateWidgetStyle
 	GENERATED_BODY()
 
 	/*----------------------------------------------------
-	    Interface
+		Interface
 	----------------------------------------------------*/
 
 	static const FName TypeName;
-	const FName        GetTypeName() const override
+	const FName GetTypeName() const override
 	{
 		return TypeName;
 	}
@@ -69,16 +72,19 @@ struct FNovaButtonSize : public FSlateWidgetStyle
 		return Default;
 	}
 
+
 	/*----------------------------------------------------
-	    Data
+		Data
 	----------------------------------------------------*/
 
 	UPROPERTY(EditDefaultsOnly, Category = Button) int32 Width;
 	UPROPERTY(EditDefaultsOnly, Category = Button) int32 Height;
+
 };
 
+
 /*----------------------------------------------------
-    Wrapper classes
+	Wrapper classes
 ----------------------------------------------------*/
 
 UCLASS()
@@ -87,6 +93,7 @@ class UNovaButtonThemeContainer : public USlateWidgetStyleContainerBase
 	GENERATED_BODY()
 
 public:
+
 	virtual const struct FSlateWidgetStyle* const GetStyle() const override
 	{
 		return static_cast<const struct FSlateWidgetStyle*>(&Style);
@@ -94,6 +101,7 @@ public:
 
 	UPROPERTY(Category = Nova, EditDefaultsOnly, meta = (ShowOnlyInnerProperties))
 	FNovaButtonTheme Style;
+
 };
 
 UCLASS()
@@ -102,6 +110,7 @@ class UNovaButtonSizeContainer : public USlateWidgetStyleContainerBase
 	GENERATED_BODY()
 
 public:
+
 	virtual const struct FSlateWidgetStyle* const GetStyle() const override
 	{
 		return static_cast<const struct FSlateWidgetStyle*>(&Style);
@@ -109,4 +118,5 @@ public:
 
 	UPROPERTY(Category = Nova, EditDefaultsOnly, meta = (ShowOnlyInnerProperties))
 	FNovaButtonSize Style;
+
 };

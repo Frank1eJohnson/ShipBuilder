@@ -9,8 +9,10 @@
 #include "Widgets/Layout/SScaleBox.h"
 #include "Materials/MaterialInstanceDynamic.h"
 
+
+
 /*----------------------------------------------------
-    Constructor
+	Constructor
 ----------------------------------------------------*/
 
 void SNovaLoadingScreen::Construct(const FArguments& InArgs)
@@ -18,14 +20,14 @@ void SNovaLoadingScreen::Construct(const FArguments& InArgs)
 	// Get args
 	AnimatedMaterialInstance = InArgs._Material;
 	NCHECK(AnimatedMaterialInstance);
-	uint32_t Width  = InArgs._Settings->Width;
+	uint32_t Width = InArgs._Settings->Width;
 	uint32_t Height = InArgs._Settings->Height;
 
 	// Build the top loading brush
 	LoadingScreenBrush = FDeferredCleanupSlateBrush::CreateBrush(AnimatedMaterialInstance, FVector2D(Width, Height));
 	NCHECK(LoadingScreenBrush.IsValid());
 
-	// clang-format off
+	// Structure
 	ChildSlot
 	[
 		SNew(SScaleBox)
@@ -62,7 +64,6 @@ void SNovaLoadingScreen::Construct(const FArguments& InArgs)
 			]
 		]
 	];
-	// clang-format on
 
 	// Defaults
 	SetVisibility((EVisibility::HitTestInvisible));

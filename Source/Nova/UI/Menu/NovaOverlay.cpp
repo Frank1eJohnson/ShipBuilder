@@ -12,24 +12,26 @@
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Engine/Texture2D.h"
 
+
 #define LOCTEXT_NAMESPACE "SNovaOverlay"
 
+
 /*----------------------------------------------------
-    Constructor
+	Constructor
 ----------------------------------------------------*/
 
 void SNovaOverlay::Construct(const FArguments& InArgs)
 {
 	// Data
 	const FNovaMainTheme& Theme = FNovaStyleSet::GetMainTheme();
-	MenuManager                 = InArgs._MenuManager;
+	MenuManager = InArgs._MenuManager;
 
 	// Create material
-	auto DynamicBrush        = FNovaStyleSet::GetDynamicBrush("Notification/SB_NotificationIcon_Base");
-	NotificationIconBrush    = DynamicBrush.Key;
+	auto DynamicBrush = FNovaStyleSet::GetDynamicBrush("Notification/SB_NotificationIcon_Base");
+	NotificationIconBrush = DynamicBrush.Key;
 	NotificationIconMaterial = DynamicBrush.Value;
 
-	// clang-format off
+	// Structure
 	ChildSlot
 	.VAlign(VAlign_Fill)
 	[
@@ -90,21 +92,21 @@ void SNovaOverlay::Construct(const FArguments& InArgs)
 			]
 		]
 	];
-	// clang-format on
 
 	// Defaults
-	NotifyFadeDuration    = ENovaUIConstants::FadeDurationShort;
+	NotifyFadeDuration = ENovaUIConstants::FadeDurationShort;
 	NotifyDisplayDuration = 5.0f;
 
 	// Initialization
-	CurrentNotifyAlpha       = 0;
-	CurrentNotifyFadeTime    = 0;
+	CurrentNotifyAlpha = 0;
+	CurrentNotifyFadeTime = 0;
 	CurrentNotifyDisplayTime = NotifyDisplayDuration;
 	SetVisibility(EVisibility::HitTestInvisible);
 }
 
+
 /*----------------------------------------------------
-    Interaction
+	Interaction
 ----------------------------------------------------*/
 
 void SNovaOverlay::Notify(FText Text, ENovaNotificationType Type)
@@ -135,12 +137,12 @@ void SNovaOverlay::Tick(const FGeometry& AllottedGeometry, const double CurrentT
 		CurrentNotifyFadeTime += DeltaTime;
 	}
 	CurrentNotifyFadeTime = FMath::Clamp(CurrentNotifyFadeTime, 0.0f, NotifyFadeDuration);
-	CurrentNotifyAlpha    = FMath::InterpEaseInOut(0.0f, 1.0f, CurrentNotifyFadeTime / NotifyFadeDuration, ENovaUIConstants::EaseStandard);
+	CurrentNotifyAlpha = FMath::InterpEaseInOut(0.0f, 1.0f, CurrentNotifyFadeTime / NotifyFadeDuration, ENovaUIConstants::EaseStandard);
 
 	// Update notification text & icon when invisible
 	if (CurrentNotifyFadeTime <= 0 && CurrentNotifyText.ToString() != DesiredNotifyText.ToString())
 	{
-		CurrentNotifyText        = DesiredNotifyText;
+		CurrentNotifyText = DesiredNotifyText;
 		CurrentNotifyDisplayTime = 0;
 
 		const FSlateBrush* TemplateNotificationBrush = nullptr;
@@ -173,8 +175,9 @@ void SNovaOverlay::Tick(const FGeometry& AllottedGeometry, const double CurrentT
 	}
 }
 
+
 /*----------------------------------------------------
-    Content callbacks
+	Content callbacks
 ----------------------------------------------------*/
 
 FText SNovaOverlay::GetNotifyText() const
@@ -203,8 +206,10 @@ FSlateColor SNovaOverlay::GetTextColor() const
 	return Color;
 }
 
+
 /*----------------------------------------------------
-    Callbacks
+	Callbacks
 ----------------------------------------------------*/
+
 
 #undef LOCTEXT_NAMESPACE

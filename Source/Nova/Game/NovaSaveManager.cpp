@@ -1,4 +1,4 @@
-﻿// Nova project - Gwennaël Arbona
+// Nova project - Gwenna�l Arbona
 
 #include "NovaSaveManager.h"
 
@@ -15,8 +15,9 @@
 #include "Runtime/Json/Public/Serialization/JsonWriter.h"
 #include "Runtime/Json/Public/Serialization/JsonSerializer.h"
 
+
 /*----------------------------------------------------
-    Asynchronous task
+	Asynchronous task
 ----------------------------------------------------*/
 
 class FNovaAsyncSave : public FNonAbandonableTask
@@ -24,12 +25,16 @@ class FNovaAsyncSave : public FNonAbandonableTask
 	friend class FAutoDeleteAsyncTask<FNovaAsyncSave>;
 
 public:
-	FNovaAsyncSave(
-		UNovaSaveManager* SaveSystemParam, const FString SaveNameParam, TSharedPtr<FNovaGameSave> SaveDataParam, bool CompressParam)
-		: SaveName(SaveNameParam), SaveData(SaveDataParam), SaveSystem(SaveSystemParam), Compress(CompressParam)
+
+	FNovaAsyncSave(UNovaSaveManager* SaveSystemParam, const FString SaveNameParam, TSharedPtr<FNovaGameSave> SaveDataParam, bool CompressParam)
+		: SaveName(SaveNameParam)
+		, SaveData(SaveDataParam)
+		, SaveSystem(SaveSystemParam)
+		, Compress(CompressParam)
 	{}
 
 protected:
+
 	void DoWork()
 	{
 		NLOG("FNovaAsyncSave::DoWork : started");
@@ -45,27 +50,31 @@ protected:
 	}
 
 protected:
-	FString                   SaveName;
+
+	FString SaveName;
 	TSharedPtr<FNovaGameSave> SaveData;
-	UNovaSaveManager*         SaveSystem;
-	bool                      Compress;
+	UNovaSaveManager* SaveSystem;
+	bool Compress;
 };
 
+
 /*----------------------------------------------------
-    Constructor
+	Constructor
 ----------------------------------------------------*/
 
-UNovaSaveManager::UNovaSaveManager() : Super()
-{}
+UNovaSaveManager::UNovaSaveManager()
+	: Super()
+{
+}
+
 
 /*----------------------------------------------------
-    Interface
+	Interface
 ----------------------------------------------------*/
 
 bool UNovaSaveManager::DoesSaveExist(const FString SaveName)
 {
-	return IFileManager::Get().FileSize(*GetSaveGamePath(SaveName, true)) >= 0 ||
-		   IFileManager::Get().FileSize(*GetSaveGamePath(SaveName, false)) >= 0;
+	return IFileManager::Get().FileSize(*GetSaveGamePath(SaveName, true)) >= 0 || IFileManager::Get().FileSize(*GetSaveGamePath(SaveName, false)) >= 0;
 }
 
 void UNovaSaveManager::SaveGameAsync(const FString SaveName, TSharedPtr<FNovaGameSave> SaveData, bool Compress)
@@ -98,7 +107,7 @@ bool UNovaSaveManager::SaveGame(const FString SaveName, TSharedPtr<FNovaGameSave
 	SaveLock.Lock();
 
 	// Initialize
-	bool                    Result = false;
+	bool Result = false;
 	TSharedPtr<FJsonObject> JsonData;
 	UNovaGameInstance::SerializeJson(SaveData, JsonData, ENovaSerialize::DataToJson);
 	FString FileContents = JsonToString(JsonData);
@@ -107,26 +116,29 @@ bool UNovaSaveManager::SaveGame(const FString SaveName, TSharedPtr<FNovaGameSave
 	if (Compress)
 	{
 		// Estimate sizes - 4 bytes to store size, 512 byes of margin for small files with higher compressed sizes
-		uint32 DataSize               = FCStringAnsi::Strlen(TCHAR_TO_UTF8(*FileContents));
-		int32  ContentsCompressedSize = DataSize + 512;
-		int32  FullCompressedSize     = ContentsCompressedSize + 4;
+		uint32 DataSize = FCStringAnsi::Strlen(TCHAR_TO_UTF8(*FileContents));
+		int32 ContentsCompressedSize = DataSize + 512;
+		int32 FullCompressedSize = ContentsCompressedSize + 4;
 
 		// Allocate a buffer
-		uint8* CompressedData         = new uint8[FullCompressedSize];
+		uint8* CompressedData = new uint8[FullCompressedSize];
 		uint8* CompressedDataContents = CompressedData + 4;
 
 		// Write size
 		CompressedData[0] = (DataSize >> 24) & 0xFF;
 		CompressedData[1] = (DataSize >> 16) & 0xFF;
-		CompressedData[2] = (DataSize >> 8) & 0xFF;
-		CompressedData[3] = (DataSize >> 0) & 0xFF;
+		CompressedData[2] = (DataSize >>  8) & 0xFF;
+		CompressedData[3] = (DataSize >>  0) & 0xFF;
 
 		// Compress contents
-		if (FCompression::CompressMemory(NAME_Zlib, CompressedDataContents, ContentsCompressedSize, TCHAR_TO_UTF8(*FileContents), DataSize))
+		if (FCompression::CompressMemory(NAME_Zlib,
+			CompressedDataContents,
+			ContentsCompressedSize,
+			TCHAR_TO_UTF8(*FileContents),
+			DataSize))
 		{
 			int32 EffectiveCompressedSize = ContentsCompressedSize + 4;
-			Result                        = FFileHelper::SaveArrayToFile(
-                TArrayView<const uint8>(CompressedData, EffectiveCompressedSize), *GetSaveGamePath(SaveName, true));
+			Result = FFileHelper::SaveArrayToFile(TArrayView<const uint8>(CompressedData, EffectiveCompressedSize), *GetSaveGamePath(SaveName, true));
 		}
 		else
 		{
@@ -157,9 +169,9 @@ TSharedPtr<FNovaGameSave> UNovaSaveManager::LoadGame(const FString SaveName)
 	NLOG("UNovaSaveManager::LoadGame : loading from '%s'", *SaveName);
 
 	// Initialize
-	FString       SaveString;
+	FString SaveString;
 	TArray<uint8> Data;
-	bool          SaveStringLoaded = false;
+	bool SaveStringLoaded = false;
 
 	auto LoadCompressedFileToString = [&](FString& Result, const TCHAR* Filename)
 	{
@@ -175,17 +187,15 @@ TSharedPtr<FNovaGameSave> UNovaSaveManager::LoadGame(const FString SaveName)
 		Data.SetNum(UncompressedSize + 1);
 
 		// Uncompress
-		if (!FCompression::UncompressMemory(
-				NAME_Zlib, Data.GetData(), UncompressedSize, CompressedData.GetData() + 4, CompressedData.Num() - 4))
+		if (!FCompression::UncompressMemory(NAME_Zlib, Data.GetData(), UncompressedSize, CompressedData.GetData() + 4, CompressedData.Num() - 4))
 		{
-			NERR("UNovaSaveManager::LoadGame : failed to uncompress with compressed size %d and uncompressed size %d", CompressedData.Num(),
-				UncompressedSize);
+			NERR("UNovaSaveManager::LoadGame : failed to uncompress with compressed size %d and uncompressed size %d", CompressedData.Num(), UncompressedSize);
 			return false;
 		}
 
 		// Convert to string
 		Data[UncompressedSize] = 0;
-		Result                 = UTF8_TO_TCHAR(Data.GetData());
+		Result = UTF8_TO_TCHAR(Data.GetData());
 		return true;
 	};
 
@@ -205,15 +215,14 @@ TSharedPtr<FNovaGameSave> UNovaSaveManager::LoadGame(const FString SaveName)
 	if (SaveStringLoaded)
 	{
 		TSharedPtr<FNovaGameSave> SaveData;
-		TSharedPtr<FJsonObject>   JsonData = StringToJson(SaveString);
+		TSharedPtr<FJsonObject> JsonData = StringToJson(SaveString);
 		UNovaGameInstance::SerializeJson(SaveData, JsonData, ENovaSerialize::JsonToData);
 
 		return SaveData;
 	}
 	else
 	{
-		NERR("UNovaSaveManager::LoadGame : failed to read either '%s' or '%s'", *GetSaveGamePath(SaveName, true),
-			*GetSaveGamePath(SaveName, false));
+		NERR("UNovaSaveManager::LoadGame : failed to read either '%s' or '%s'", *GetSaveGamePath(SaveName, true), *GetSaveGamePath(SaveName, false));
 	}
 
 	return TSharedPtr<FNovaGameSave>();
@@ -221,13 +230,13 @@ TSharedPtr<FNovaGameSave> UNovaSaveManager::LoadGame(const FString SaveName)
 
 bool UNovaSaveManager::DeleteGame(const FString SaveName)
 {
-	bool Result = IFileManager::Get().Delete(*GetSaveGamePath(SaveName, false), true) |
-				  IFileManager::Get().Delete(*GetSaveGamePath(SaveName, true), true);
+	bool Result = IFileManager::Get().Delete(*GetSaveGamePath(SaveName, false), true) | IFileManager::Get().Delete(*GetSaveGamePath(SaveName, true), true);
 	return Result;
 }
 
+
 /*----------------------------------------------------
-    Helpers
+	Helpers
 ----------------------------------------------------*/
 
 FString UNovaSaveManager::GetSaveGamePath(const FString SaveName, bool Compressed)
@@ -245,8 +254,7 @@ FString UNovaSaveManager::GetSaveGamePath(const FString SaveName, bool Compresse
 FString UNovaSaveManager::JsonToString(const TSharedPtr<FJsonObject>& SaveData)
 {
 	FString SerializedSaveData;
-	auto    JsonWriter = TJsonWriterFactory<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>::Create(&SerializedSaveData);
-
+	TSharedRef<TJsonWriter<>> JsonWriter = TJsonWriterFactory<>::Create(&SerializedSaveData);
 	if (!FJsonSerializer::Serialize(SaveData.ToSharedRef(), JsonWriter))
 	{
 		NCHECK(false);
@@ -259,9 +267,8 @@ FString UNovaSaveManager::JsonToString(const TSharedPtr<FJsonObject>& SaveData)
 
 TSharedPtr<FJsonObject> UNovaSaveManager::StringToJson(const FString& SerializedSaveData)
 {
-	TSharedPtr<FJsonObject>   SaveData;
+	TSharedPtr<FJsonObject> SaveData;
 	TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(SerializedSaveData);
-
 	if (!FJsonSerializer::Deserialize(Reader, SaveData) || !SaveData.IsValid())
 	{
 		NCHECK(false);

@@ -7,6 +7,7 @@
 
 #include "NovaCaptureActor.generated.h"
 
+
 /** Camera control pawn for the factory view */
 UCLASS(Config = Game, ClassGroup = (Nova))
 class ANovaCaptureActor : public AActor
@@ -14,16 +15,20 @@ class ANovaCaptureActor : public AActor
 	GENERATED_BODY()
 
 public:
+
 	ANovaCaptureActor();
 
+
 	/*----------------------------------------------------
-	    Gameplay
+		Gameplay
 	----------------------------------------------------*/
 
 	/** Render this asset and save it */
 	void RenderAsset(class UNovaAssetDescription* Asset, struct FSlateBrush& AssetRender);
+	
 
 protected:
+
 #if WITH_EDITOR
 
 	/** Spawn the assembly */
@@ -46,11 +51,13 @@ protected:
 
 #endif
 
+
 	/*----------------------------------------------------
-	    Properties
+		Properties
 	----------------------------------------------------*/
 
 public:
+
 	// Empty compartment kit
 	UPROPERTY(Category = Nova, EditDefaultsOnly)
 	class UNovaCompartmentDescription* EmptyCompartmentDescription;
@@ -63,11 +70,13 @@ public:
 	UPROPERTY(Category = Nova, EditDefaultsOnly)
 	int32 ResultUpscaleFactor;
 
+
 	/*----------------------------------------------------
-	    Components
+		Components
 	----------------------------------------------------*/
 
 protected:
+
 	// Camera arm
 	UPROPERTY(Category = Nova, VisibleDefaultsOnly, BlueprintReadOnly)
 	class USceneComponent* CameraArmComponent;
@@ -76,23 +85,26 @@ protected:
 	UPROPERTY(Category = Nova, VisibleDefaultsOnly, BlueprintReadOnly)
 	class USceneCaptureComponent2D* CameraCapture;
 
+
 protected:
+
 	/*----------------------------------------------------
-	    Data
+		Data
 	----------------------------------------------------*/
 
 	// Spacecraft pawn
 	UPROPERTY()
-	class ANovaSpacecraftPawn* SpacecraftPawn;
+	class ANovaSpacecraftPawn*                    SpacecraftPawn;
 
 	// Catalog
 	UPROPERTY(Transient)
-	class UNovaAssetCatalog* Catalog;
+	class UNovaAssetCatalog*                      Catalog;
 
 	// Render target used for rendering the assets
 	UPROPERTY(Transient)
-	class UTextureRenderTarget2D* RenderTarget;
+	class UTextureRenderTarget2D*                 RenderTarget;
 
 	// General data
-	TSharedPtr<struct FNovaSpacecraft> Spacecraft;
+	TSharedPtr<struct FNovaSpacecraft>            Spacecraft;
+
 };

@@ -9,16 +9,15 @@
 
 #include "NovaSkeletalMeshComponent.generated.h"
 
+
 /** Modified skeletal mesh component that supports dynamic materials */
 UCLASS(ClassGroup = (Nova), meta = (BlueprintSpawnableComponent))
-class UNovaSkeletalMeshComponent
-	: public USkeletalMeshComponent
-	, public INovaMeshInterface
-	, public FNovaMeshInterfaceBehavior
+class UNovaSkeletalMeshComponent : public USkeletalMeshComponent, public INovaMeshInterface, public FNovaMeshInterfaceBehavior
 {
 	GENERATED_BODY()
 
 public:
+
 	UNovaSkeletalMeshComponent()
 	{
 		PrimaryComponentTick.bCanEverTick = true;
@@ -26,7 +25,7 @@ public:
 	}
 
 	/*----------------------------------------------------
-	    Inherited
+		Inherited
 	----------------------------------------------------*/
 
 	virtual void BeginPlay() override
@@ -95,24 +94,22 @@ public:
 	virtual FTransform GetRelativeSocketTransform(FName SocketName) const override
 	{
 		FVector Location = FVector::ZeroVector;
-		FQuat   Rotation = FQuat::Identity;
+		FQuat Rotation = FQuat::Identity;
 		GetSocketWorldLocationAndRotation(SocketName, Location, Rotation);
 		Location = GetComponentTransform().InverseTransformPosition(Location);
 		Rotation = GetComponentTransform().InverseTransformRotation(Rotation);
 		return FTransform(Rotation, Location);
 	}
 
-	virtual bool MoveComponentImpl(const FVector& Delta, const FQuat& NewRotationQuat, bool bSweep, FHitResult* OutHit,
-		EMoveComponentFlags MoveFlags, ETeleportType Teleport) override
+	virtual bool MoveComponentImpl(const FVector& Delta, const FQuat& NewRotationQuat, bool bSweep, FHitResult* OutHit, EMoveComponentFlags MoveFlags, ETeleportType Teleport) override
 	{
 		FVector OriginalLocation = GetComponentLocation();
-		bool    Moved            = Super::MoveComponentImpl(Delta, NewRotationQuat, bSweep, OutHit, MoveFlags, Teleport);
+		bool Moved = Super::MoveComponentImpl(Delta, NewRotationQuat, bSweep, OutHit, MoveFlags, Teleport);
 
 		if (Moved)
 		{
 			Moved = INovaMeshInterface::MoveComponentHierarchy(this, OriginalLocation, Delta, NewRotationQuat, bSweep, OutHit, Teleport,
-				FInternalSetWorldLocationAndRotation::CreateLambda(
-					[&](const FVector& NewLocation, const FQuat& NewQuat, ETeleportType Teleport)
+				FInternalSetWorldLocationAndRotation::CreateLambda([&](const FVector& NewLocation, const FQuat& NewQuat, ETeleportType Teleport)
 					{
 						return InternalSetWorldLocationAndRotation(NewLocation, NewQuat, false, Teleport);
 					}));
@@ -120,4 +117,5 @@ public:
 
 		return Moved;
 	}
+
 };

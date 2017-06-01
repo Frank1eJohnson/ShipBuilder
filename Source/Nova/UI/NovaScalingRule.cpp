@@ -1,4 +1,4 @@
-﻿// Nova project - Gwennaël Arbona
+// Nova project - Gwenna�l Arbona
 
 #include "NovaScalingRule.h"
 

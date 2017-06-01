@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "Nova/Nova.h"
 #include "Nova/UI/NovaUI.h"
@@ -6,14 +6,39 @@
 
 #include "Widgets/SCompoundWidget.h"
 
+
+/** Equivalent to SNew, automatically store the button into FocusableButtons */
+#define SNovaNew(WidgetType, ...) \
+	NewFocusableButton<WidgetType>(#WidgetType, __FILE__, __LINE__, RequiredArgs::MakeRequiredArgs(__VA_ARGS__), false ) \
+	<<= TYPENAME_OUTSIDE_TEMPLATE WidgetType::FArguments()
+
+/** Equivalent to SNew, automatically store the button into FocusableButtons and set as default focus */
+#define SNovaDefaultNew(WidgetType, ...) \
+	NewFocusableButton<WidgetType>(#WidgetType, __FILE__, __LINE__, RequiredArgs::MakeRequiredArgs(__VA_ARGS__), true ) \
+	<<= TYPENAME_OUTSIDE_TEMPLATE WidgetType::FArguments()
+
+/** Equivalent to SAssignNew, automatically store the button into FocusableButtons */
+#define SNovaAssignNew(ExposeAs, WidgetType, ...) \
+	NewFocusableButton<WidgetType>(#WidgetType, __FILE__, __LINE__, RequiredArgs::MakeRequiredArgs(__VA_ARGS__), false ) \
+	.Expose(ExposeAs) \
+	<<= TYPENAME_OUTSIDE_TEMPLATE WidgetType::FArguments()
+
+/** Equivalent to SAssignNew, automatically store the button into FocusableButtons and set as default focus */
+#define SNovaDefaultAssignNew(ExposeAs, WidgetType, ...) \
+	NewFocusableButton<WidgetType>(#WidgetType, __FILE__, __LINE__, RequiredArgs::MakeRequiredArgs(__VA_ARGS__), true ) \
+	.Expose(ExposeAs) \
+	<<= TYPENAME_OUTSIDE_TEMPLATE WidgetType::FArguments()
+
+
 /** Inherit this class for focus support, set DefaultNavigationButton for default focus (optional) */
 class SNovaNavigationPanel : public SCompoundWidget
 {
 	/*----------------------------------------------------
-	    Slate arguments
+		Slate arguments
 	----------------------------------------------------*/
-
-	SLATE_BEGIN_ARGS(SNovaNavigationPanel) : _Menu(nullptr)
+	
+	SLATE_BEGIN_ARGS(SNovaNavigationPanel)
+		: _Menu(nullptr)
 	{}
 
 	SLATE_ARGUMENT(class SNovaMenu*, Menu)
@@ -24,15 +49,16 @@ class SNovaNavigationPanel : public SCompoundWidget
 
 	void Construct(const FArguments& InArgs);
 
+public:
+
 	/*----------------------------------------------------
-	    Interaction
+		Interaction
 	----------------------------------------------------*/
 
-public:
 	/** Create a new focusable button */
-	template <typename WidgetType, typename RequiredArgsPayloadType>
-	TDecl<WidgetType, RequiredArgsPayloadType> NewNovaButton(
-		const ANSICHAR* InType, const ANSICHAR* InFile, int32 OnLine, RequiredArgsPayloadType&& InRequiredArgs, bool DefaultFocus)
+	template<typename WidgetType, typename RequiredArgsPayloadType>
+	TDecl<WidgetType, RequiredArgsPayloadType> NewFocusableButton(const ANSICHAR* InType, const ANSICHAR* InFile, int32 OnLine,
+		RequiredArgsPayloadType&& InRequiredArgs, bool DefaultFocus)
 	{
 		auto Button = TDecl<WidgetType, RequiredArgsPayloadType>(InType, InFile, OnLine, Forward<RequiredArgsPayloadType>(InRequiredArgs));
 
@@ -51,6 +77,12 @@ public:
 		NavigationButtons.Remove(Button);
 	}
 
+	/** Pass the primary ability input to this menu */
+	virtual void AbilityPrimary();
+
+	/** Pass the secondary ability input to this menu */
+	virtual void AbilitySecondary();
+
 	/** Zoom in */
 	virtual void ZoomIn();
 
@@ -62,14 +94,6 @@ public:
 
 	/** Pass the cancel input to this menu, return true if used */
 	virtual bool Cancel();
-
-	/** Clicked */
-	virtual void OnClicked(const FVector2D& Position)
-	{}
-
-	/** Clicked */
-	virtual void OnDoubleClicked(const FVector2D& Position)
-	{}
 
 	/** Pass horizontal right-stick or mouse drag input to this widget */
 	virtual void HorizontalAnalogInput(float Value)
@@ -83,14 +107,9 @@ public:
 	virtual void OnFocusChanged(TSharedPtr<class SNovaButton> FocusButton)
 	{}
 
-	/** Check whether this panel is modal */
-	virtual bool IsModal() const
-	{
-		return false;
-	}
-
 	/** Get the ideal default focus button */
 	virtual TSharedPtr<SNovaButton> GetDefaultFocusButton() const;
+
 
 	/** Reset the focus to the default button, or any button */
 	void ResetNavigation();
@@ -113,12 +132,17 @@ public:
 	/** Set the contents */
 	void SetContent(const TSharedRef<SWidget>& InContent)
 	{
-		ChildSlot[InContent];
+		ChildSlot
+			[
+				InContent
+			];
 	}
 
+
 protected:
-	// Navigation state
-	class SNovaMenu*                Menu;
-	TSharedPtr<SNovaButton>         DefaultNavigationButton;
-	TArray<TSharedPtr<SNovaButton>> NavigationButtons;
+
+	class SNovaMenu*                              Menu;
+	TSharedPtr<SNovaButton>                       DefaultNavigationButton;
+	TArray<TSharedPtr<SNovaButton>>               NavigationButtons;
+
 };

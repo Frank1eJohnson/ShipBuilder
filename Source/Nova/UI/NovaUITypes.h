@@ -1,21 +1,22 @@
-﻿// Nova project - Gwennaël Arbona
+// Nova project - Gwenna�l Arbona
 
 #pragma once
 
+
 /*----------------------------------------------------
-    General purpose types
+	General purpose types
 ----------------------------------------------------*/
 
 /** UI constants */
 namespace ENovaUIConstants
 {
-constexpr float EaseLight           = 1.5f;
-constexpr float EaseStandard        = 2.0f;
-constexpr float EaseStrong          = 4.0f;
-constexpr float FadeDurationMinimal = 0.1f;
-constexpr float FadeDurationShort   = 0.25f;
-constexpr float FadeDurationLong    = 0.5f;
-}    // namespace ENovaUIConstants
+	constexpr float EaseLight = 1.5f;
+	constexpr float EaseStandard = 2.0f;
+	constexpr float EaseStrong = 4.0f;
+	constexpr float FadeDurationMinimal = 0.1f;
+	constexpr float FadeDurationShort = 0.25f;
+	constexpr float FadeDurationLong = 0.5f;
+}
 
 /** Notification type */
 enum class ENovaNotificationType : uint8
@@ -34,14 +35,16 @@ enum class ENovaLoadingScreen : uint8
 	Black
 };
 
+
 /*----------------------------------------------------
-    Player input types
+	Player input types
 ----------------------------------------------------*/
 
 /** Player input bindings */
 class FNovaPlayerInput
 {
 public:
+
 	// Game-specific menu actions
 	static const FName MenuPrimary;
 	static const FName MenuSecondary;
@@ -62,4 +65,5 @@ public:
 	static const FName MenuZoomOut;
 	static const FName MenuAnalogHorizontal;
 	static const FName MenuAnalogVertical;
+
 };

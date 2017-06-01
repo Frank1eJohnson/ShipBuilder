@@ -3,18 +3,19 @@
 #include "NovaKeyLabel.h"
 #include "Nova/UI/NovaUI.h"
 
+
 /*----------------------------------------------------
-    Construct
+	Construct
 ----------------------------------------------------*/
 
 void SNovaKeyLabel::Construct(const FArguments& InArgs)
 {
 	// Setup
 	const FNovaMainTheme& Theme = FNovaStyleSet::GetMainTheme();
-	KeyName                     = InArgs._Key;
-	CurrentAlpha                = InArgs._Alpha;
-
-	// clang-format off
+	KeyName = InArgs._Key;
+	CurrentAlpha = InArgs._Alpha;
+	
+	// Structure
 	ChildSlot
 	[
 		SNew(SOverlay)
@@ -38,11 +39,11 @@ void SNovaKeyLabel::Construct(const FArguments& InArgs)
 			.ColorAndOpacity(this, &SNovaKeyLabel::GetKeyTextColor)
 		]
 	];
-	// clang-format on
 }
 
+
 /*----------------------------------------------------
-    Callbacks
+	Callbacks
 ----------------------------------------------------*/
 
 FText SNovaKeyLabel::GetKeyText() const

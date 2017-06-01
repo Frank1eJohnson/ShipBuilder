@@ -11,22 +11,26 @@
 
 #include "Nova/Nova.h"
 
+
 #define LOCTEXT_NAMESPACE "SNovaMainMenuHome"
 
+
 /*----------------------------------------------------
-    Constructor
+	Constructor
 ----------------------------------------------------*/
 
 void SNovaMainMenuHome::Construct(const FArguments& InArgs)
 {
 	// Data
 	const FNovaMainTheme& Theme = FNovaStyleSet::GetMainTheme();
-	MenuManager                 = InArgs._MenuManager;
+	MenuManager = InArgs._MenuManager;
 
 	// Parent constructor
-	SNovaNavigationPanel::Construct(SNovaNavigationPanel::FArguments().Menu(InArgs._Menu));
+	SNovaNavigationPanel::Construct(SNovaNavigationPanel::FArguments()
+		.Menu(InArgs._Menu)
+	);
 
-	// clang-format off
+	// Structure
 	ChildSlot
 	[
 		SNew(SHorizontalBox)
@@ -50,11 +54,11 @@ void SNovaMainMenuHome::Construct(const FArguments& InArgs)
 
 		+ SHorizontalBox::Slot()
 	];
-	// clang-format on
 }
 
+
 /*----------------------------------------------------
-    Interaction
+	Interaction
 ----------------------------------------------------*/
 
 void SNovaMainMenuHome::Show()
@@ -67,17 +71,21 @@ void SNovaMainMenuHome::Hide()
 	SNovaTabPanel::Hide();
 }
 
-/*----------------------------------------------------
-    Content callbacks
-----------------------------------------------------*/
 
 /*----------------------------------------------------
-    Callbacks
+	Content callbacks
+----------------------------------------------------*/
+
+
+/*----------------------------------------------------
+	Callbacks
 ----------------------------------------------------*/
 
 void SNovaMainMenuHome::OnLaunchGame()
 {
 	MenuManager->GetPC()->StartGame("1", true);
 }
+
+
 
 #undef LOCTEXT_NAMESPACE

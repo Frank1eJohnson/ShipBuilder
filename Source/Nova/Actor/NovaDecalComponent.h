@@ -9,23 +9,22 @@
 
 #include "NovaDecalComponent.generated.h"
 
+
 /** Modified decal component that supports dynamic materials */
 UCLASS(ClassGroup = (Nova), meta = (BlueprintSpawnableComponent))
-class UNovaDecalComponent
-	: public UDecalComponent
-	, public INovaMeshInterface
-	, public FNovaMeshInterfaceBehavior
+class UNovaDecalComponent : public UDecalComponent, public INovaMeshInterface, public FNovaMeshInterfaceBehavior
 {
 	GENERATED_BODY()
 
 public:
+
 	UNovaDecalComponent()
 	{
 		PrimaryComponentTick.bCanEverTick = true;
 	}
 
 	/*----------------------------------------------------
-	    Inherited
+		Inherited
 	----------------------------------------------------*/
 
 	virtual void BeginPlay() override
@@ -79,4 +78,5 @@ public:
 	{
 		FNovaMeshInterfaceBehavior::RequestParameter(Name, Value, Immediate);
 	}
+
 };

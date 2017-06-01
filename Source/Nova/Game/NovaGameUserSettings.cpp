@@ -3,15 +3,18 @@
 #include "NovaGameUserSettings.h"
 #include "Nova/Nova.h"
 
+
 /*----------------------------------------------------
-    Constructor
+	Constructor
 ----------------------------------------------------*/
 
 UNovaGameUserSettings::UNovaGameUserSettings()
-{}
+{
+}
+
 
 /*----------------------------------------------------
-    Settings
+	Settings
 ----------------------------------------------------*/
 
 void UNovaGameUserSettings::ApplyCustomGraphicsSettings()
@@ -21,29 +24,27 @@ void UNovaGameUserSettings::ApplyCustomGraphicsSettings()
 	SSGIVar->Set(EnableSSGI ? 1 : 0, ECVF_SetByConsole);
 }
 
+
 /*----------------------------------------------------
-    Inherited
+	Inherited
 ----------------------------------------------------*/
 
 void UNovaGameUserSettings::SetToDefaults()
 {
 	Super::SetToDefaults();
 
-	// System
-	EnableCrashReports = true;
-
 	// Gameplay
-	MouseSensitivity   = 0.8f;
+	MouseSensitivity = 0.8f;
 	GamepadSensitivity = 2.0f;
-	FOV                = 90.0f;
+	FOV = 90.0f;
 
 	// Graphics
-	EnableSSGI                 = false;
+	EnableSSGI = false;
 	EnableRaytracedReflections = false;
-	EnableRaytracedShadows     = false;
-	EnableRaytracedAO          = false;
-	EnableCinematicBloom       = false;
-	ScreenPercentage           = 100.0f;
+	EnableRaytracedShadows = false;
+	EnableRaytracedAO = false;
+	EnableCinematicBloom = false;
+	ScreenPercentage = 100.0f;
 }
 
 void UNovaGameUserSettings::ApplySettings(bool bCheckForCommandLineOverrides)
@@ -52,3 +53,4 @@ void UNovaGameUserSettings::ApplySettings(bool bCheckForCommandLineOverrides)
 
 	ApplyCustomGraphicsSettings();
 }
+

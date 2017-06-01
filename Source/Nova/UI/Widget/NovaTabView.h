@@ -9,12 +9,14 @@
 #include "Widgets/Layout/SWidgetSwitcher.h"
 #include "Widgets/SBoxPanel.h"
 
+
 /** Subclass for tab widgets that fade in our out */
 class SNovaTabPanel : public SNovaNavigationPanel
 {
 	friend class SNovaTabView;
 
 public:
+
 	SNovaTabPanel();
 
 	virtual void Tick(const FGeometry& AllottedGeometry, const double CurrentTime, const float DeltaTime) override;
@@ -39,43 +41,48 @@ public:
 		return CurrentAlpha;
 	}
 
-	/** Get the current blur radius */
-	TOptional<int32> GetBlurRadius() const;
-
-	/** Get the current blur strength */
-	float GetBlurStrength() const;
-
 	/** Check if this tab should have a blur and darkened background */
 	bool IsBlurred() const
 	{
 		return Blurred;
 	}
 
+
 protected:
+
 	// Data
-	bool  Blurred;
-	int32 TabIndex;
-	bool  CurrentVisible;
-	float CurrentAlpha;
+	bool                                          Blurred;
+	int32                                         TabIndex;
+	bool                                          CurrentVisible;
+	float                                         CurrentAlpha;
 
 	// Widgets
-	TSharedPtr<class SScrollBox>   MainContainer;
-	TSharedPtr<class SNovaTabView> ParentTabView;
+	TSharedPtr<class SScrollBox>                  MainContainer;
+	TSharedPtr<class SNovaTabView>                ParentTabView;
+
 };
+
 
 /** Tab view class that takes multiple tab slots, and optional toolbar widgets */
 class SNovaTabView : public SCompoundWidget
 {
 public:
+
 	/*----------------------------------------------------
-	    Tab slot class
+		Tab slot class
 	----------------------------------------------------*/
 
 	class FSlot : public TSlotBase<FSlot>
 	{
 	public:
-		FSlot() : TSlotBase<FSlot>(), Blurred(false), HeaderText(), HeaderHelpText()
-		{}
+
+		FSlot()
+			: TSlotBase<FSlot>()
+			, Blurred(false)
+			, HeaderText()
+			, HeaderHelpText()
+		{
+		}
 
 		FSlot& Header(FText Text)
 		{
@@ -113,22 +120,28 @@ public:
 			return *this;
 		}
 
-		bool             Blurred;
-		FText            HeaderText;
-		FText            HeaderHelpText;
+		bool Blurred;
+		FText HeaderText;
+		FText HeaderHelpText;
 		TAttribute<bool> IsVisible;
 	};
 
+
 public:
+
 	/*----------------------------------------------------
-	    Slate arguments
+		Slate arguments
 	----------------------------------------------------*/
 
-	SLATE_BEGIN_ARGS(SNovaTabView) : _LeftNavigation(), _RightNavigation(), _End(), _Header()
+	SLATE_BEGIN_ARGS(SNovaTabView)
+		: _LeftNavigation()
+		, _RightNavigation()
+		, _End()
+		, _Header()
 	{}
 
 	SLATE_SUPPORTS_SLOT(FSlot)
-
+	
 	SLATE_NAMED_SLOT(FArguments, LeftNavigation)
 
 	SLATE_NAMED_SLOT(FArguments, RightNavigation)
@@ -136,18 +149,18 @@ public:
 	SLATE_NAMED_SLOT(FArguments, End)
 
 	SLATE_NAMED_SLOT(FArguments, Header)
-
-	SLATE_NAMED_SLOT(FArguments, BackgroundWidget)
-
+	
 	SLATE_END_ARGS()
 
+
 public:
+
 	SNovaTabView();
 
 	void Construct(const FArguments& InArgs);
 
 	/*----------------------------------------------------
-	    Public methods
+		Public methods
 	----------------------------------------------------*/
 
 	virtual void Tick(const FGeometry& AllottedGeometry, const double CurrentTime, const float DeltaTime) override;
@@ -185,11 +198,13 @@ public:
 	/** Get the current widget content root */
 	TSharedRef<SNovaTabPanel> GetCurrentTabContent() const;
 
+
 	/*----------------------------------------------------
-	    Callbacks
+		Callbacks
 	----------------------------------------------------*/
 
 protected:
+
 	/** Check the visibility for a tab */
 	EVisibility GetTabVisibility(int32 Index) const;
 
@@ -201,6 +216,7 @@ protected:
 
 	/** Get the current color for the entire panel */
 	FSlateColor GetBackgroundColor() const;
+
 
 	/** Check if we're rendering the split-blur effect or a simple fullscreen one */
 	bool IsBlurSplit() const;
@@ -220,20 +236,23 @@ protected:
 	/** Get the current blur strength for the header-only blur */
 	float GetHeaderBlurStrength() const;
 
+
 protected:
+
 	/*----------------------------------------------------
-	    Protected data
+		Protected data
 	----------------------------------------------------*/
 
 	// Data
-	int32                        DesiredTabIndex;
-	int32                        CurrentTabIndex;
-	TArray<SNovaTabView::FSlot*> SlotInfo;
-	float                        CurrentBlurAlpha;
+	int32                                         DesiredTabIndex;
+	int32                                         CurrentTabIndex;
+	TArray<SNovaTabView::FSlot*>                  SlotInfo;
+	float                                         CurrentBlurAlpha;
 
 	// Widgets
-	TSharedPtr<SBorder>         HeaderContainer;
-	TSharedPtr<SHorizontalBox>  Header;
-	TSharedPtr<SWidgetSwitcher> Content;
-	TArray<SNovaTabPanel*>      Panels;
+	TSharedPtr<SBorder>                           HeaderContainer;
+	TSharedPtr<SHorizontalBox>                    Header;
+	TSharedPtr<SWidgetSwitcher>                   Content;
+	TArray<SNovaTabPanel*>                        Panels;
+	
 };

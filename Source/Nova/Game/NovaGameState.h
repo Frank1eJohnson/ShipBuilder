@@ -6,17 +6,20 @@
 #include "GameFramework/GameStateBase.h"
 #include "NovaGameState.generated.h"
 
+
 /** Replicated game state class */
 UCLASS(ClassGroup = (Nova))
 class ANovaGameState : public AGameStateBase
 {
 	GENERATED_BODY()
-
+		
 public:
+
 	ANovaGameState();
 
+
 	/*----------------------------------------------------
-	    Gameplay
+		Gameplay
 	----------------------------------------------------*/
 
 	/** Set the current game world after it's been spawned */
@@ -46,22 +49,21 @@ public:
 	/** Get the current sub-level name to use */
 	FName GetCurrentLevelName() const;
 
-	/** Get the list of all player spacecraft identifiers */
-	TArray<FGuid> GetPlayerSpacecraftIdentifiers() const;
 
 	/*----------------------------------------------------
-	    Data
+		Data
 	----------------------------------------------------*/
 
 private:
+
 	// Game world storing all spacecraft
 	UPROPERTY(Replicated)
-	class ANovaGameWorld* GameWorld;
+	class ANovaGameWorld*                         GameWorld;
 
 	// Current level-based area
 	UPROPERTY(Replicated)
-	const class UNovaArea* CurrentArea;
+	const class UNovaArea*                        CurrentArea;
 
 	// Local state
-	bool StartDocked;
+	bool                                          StartDocked;
 };

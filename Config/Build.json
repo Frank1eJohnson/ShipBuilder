@@ -2,7 +2,7 @@
 	"name": "Nova",
 	"platforms": ["Win64", "Linux"],
 	"configuration": "Shipping",
-	"pdb": false,
+	"pdb": true,
 	"outputDir": "..\\Packaged",
 	"itch": 
 	{

@@ -8,12 +8,14 @@
 #include "NovaButtonTheme.h"
 #include "NovaSliderTheme.h"
 
+
 class FNovaStyleSet
 {
 
 public:
+
 	/*----------------------------------------------------
-	    Public methods
+		Public methods
 	----------------------------------------------------*/
 
 	/** Setup the game resources */
@@ -32,15 +34,9 @@ public:
 		FString Path = "/" + Name;
 		return Instance ? GetStyle().GetBrush(*Path) : nullptr;
 	}
-
+	
 	/** Get a new dynamic Slate brush material based on a static one - use FGCObject */
 	static TPair<TSharedPtr<struct FSlateBrush>, class UMaterialInstanceDynamic*> GetDynamicBrush(const FString& Name);
-
-	/** Get a color along a gradient using the Plasma palette */
-	static FLinearColor GetPlasmaColor(float Alpha);
-
-	/** Get a color along a gradient using the Viridis palette */
-	static FLinearColor GetViridisColor(float Alpha);
 
 	/** Get the main theme */
 	static const FNovaMainTheme& GetMainTheme(const FName& Name = TEXT("DefaultTheme"))
@@ -64,7 +60,7 @@ public:
 	}
 
 	/** Get a widget theme object */
-	template <typename T>
+	template<typename T>
 	static const T& GetTheme(const FName& Name = TEXT("Default"))
 	{
 #if WITH_EDITOR
@@ -89,20 +85,25 @@ public:
 		return *Instance;
 	}
 
+
 	/*----------------------------------------------------
-	    Internal
+		Internal
 	----------------------------------------------------*/
 
 protected:
+
 	/** Setup resources (internal) */
 	static TSharedRef<FSlateStyleSet> Create();
 
+
 	/*----------------------------------------------------
-	    Data
+		Data
 	----------------------------------------------------*/
 
 protected:
+
 	/** Resource pointer */
 	UPROPERTY()
 	static TSharedPtr<FSlateStyleSet> Instance;
+
 };

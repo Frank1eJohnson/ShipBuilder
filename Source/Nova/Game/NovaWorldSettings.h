@@ -6,6 +6,7 @@
 #include "GameFramework/WorldSettings.h"
 #include "NovaWorldSettings.generated.h"
 
+
 /** Default game mode class */
 UCLASS(ClassGroup = (Nova))
 class ANovaWorldSettings : public AWorldSettings
@@ -13,10 +14,11 @@ class ANovaWorldSettings : public AWorldSettings
 	GENERATED_BODY()
 
 public:
+
 	ANovaWorldSettings();
 
 	/*----------------------------------------------------
-	    Gameplay
+		Gameplay
 	----------------------------------------------------*/
 
 	/** Is the player restricted to menus */
@@ -33,8 +35,9 @@ public:
 		return MainMenu;
 	}
 
+
 	/*----------------------------------------------------
-	    Properties
+		Properties
 	----------------------------------------------------*/
 
 	/** Menu mode */
@@ -44,4 +47,5 @@ public:
 	/** Main menu mode */
 	UPROPERTY(EditDefaultsOnly, NoClear, BlueprintReadOnly, Category = Nova)
 	bool MainMenu;
+
 };
