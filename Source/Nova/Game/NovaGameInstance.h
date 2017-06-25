@@ -324,7 +324,7 @@ private:
 	// Friend invite accepted or joined manually
 	FOnFriendInviteAccepted OnFriendInviteAccepted;
 
-	// Friend invitation accepted through Steam, join that session
+	// Friend invitation accepted through Open Source, join that session
 	FOnSessionUserInviteAcceptedDelegate OnSessionUserInviteAcceptedDelegate;
 	FDelegateHandle                      OnSessionUserInviteAcceptedDelegateHandle;
 
