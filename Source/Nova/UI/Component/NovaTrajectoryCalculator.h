@@ -4,8 +4,13 @@
 
 #include "Nova/UI/NovaUI.h"
 
-// Callback type
-DECLARE_DELEGATE_OneParam(FOnTrajectoryChanged, TSharedPtr<struct FNovaTrajectory>);
+/** High-level orbit characteristics */
+struct FNovaTrajectoryCharacteristics
+{
+	float  IntermediateAltitude;
+	double Duration;
+	double DeltaV;
+};
 
 /** Orbital trajectory trade-off calculator */
 class SNovaTrajectoryCalculator : public SCompoundWidget
@@ -15,29 +20,23 @@ class SNovaTrajectoryCalculator : public SCompoundWidget
 	----------------------------------------------------*/
 
 	SLATE_BEGIN_ARGS(SNovaTrajectoryCalculator)
-		: _MenuManager(nullptr)
-		, _Panel(nullptr)
-		, _MinAltitude(100)
-		, _MaxAltitude(1000)
-		, _DeltaVActionName(NAME_None)
-		, _DurationActionName(NAME_None)
+		: _MenuManager(nullptr), _Panel(nullptr), _DeltaVActionName(NAME_None), _DurationActionName(NAME_None)
 	{}
 
 	SLATE_ARGUMENT(TWeakObjectPtr<class UNovaMenuManager>, MenuManager)
 	SLATE_ARGUMENT(class SNovaNavigationPanel*, Panel)
 	SLATE_ATTRIBUTE(float, CurrentAlpha)
 
-	SLATE_ARGUMENT(float, MinAltitude)
-	SLATE_ARGUMENT(float, MaxAltitude)
 	SLATE_ARGUMENT(FName, DeltaVActionName)
 	SLATE_ARGUMENT(FName, DurationActionName)
 
-	SLATE_EVENT(FOnTrajectoryChanged, OnTrajectoryChanged)
+	SLATE_EVENT(FOnFloatValueChanged, OnAltitudeChanged)
 
 	SLATE_END_ARGS()
 
 public:
-	SNovaTrajectoryCalculator();
+	SNovaTrajectoryCalculator() : CurrentTrajectoryDisplayTime(0), NeedTrajectoryDisplayUpdate(false)
+	{}
 
 	void Construct(const FArguments& InArgs);
 
@@ -54,14 +53,8 @@ public:
 	/** Reset the widget */
 	void Reset();
 
-	/** Simulate trajectories to go between orbits */
-	void SimulateTrajectories(const TSharedPtr<struct FNovaOrbit>& Source, const TSharedPtr<struct FNovaOrbit>& Destination);
-
-	/** Optimize for Delta-V */
-	void OptimizeForDeltaV();
-
-	/** Optimize for travel time */
-	void OptimizeForDuration();
+	/** Simulate trajectories to go between areas */
+	void SimulateTrajectories(const class UNovaArea* Source, const class UNovaArea* Destination);
 
 	/*----------------------------------------------------
 	    Callbacks
@@ -78,11 +71,6 @@ protected:
 		return TrajectoryDurationGradientData;
 	}
 
-	FText GetDeltaVText() const;
-	FText GetDurationText() const;
-
-	void OnAltitudeSliderChanged(float Altitude);
-
 	/*----------------------------------------------------
 	    Data
 	----------------------------------------------------*/
@@ -91,26 +79,11 @@ protected:
 	// Settings
 	TWeakObjectPtr<UNovaMenuManager> MenuManager;
 	TAttribute<float>                CurrentAlpha;
-	FOnTrajectoryChanged             OnTrajectoryChanged;
-	int32                            AltitudeStep;
 
 	// Trajectory data
-	TMap<float, TSharedPtr<struct FNovaTrajectory>> SimulatedTrajectories;
-	float                                           MinDeltaV;
-	float                                           MinDeltaVWithTolerance;
-	float                                           MaxDeltaV;
-	float                                           MinDuration;
-	float                                           MaxDuration;
-	float                                           MinDeltaVAltitude;
-	float                                           MinDurationAltitude;
-
-	// Display data
-	TArray<FLinearColor> TrajectoryDeltaVGradientData;
-	TArray<FLinearColor> TrajectoryDurationGradientData;
-	float                CurrentTrajectoryDisplayTime;
-	bool                 NeedTrajectoryDisplayUpdate;
-	float                CurrentAltitude;
-
-	// Slate widgets
-	TSharedPtr<class SNovaSlider> Slider;
+	TArray<FNovaTrajectoryCharacteristics> SimulatedTrajectories;
+	TArray<FLinearColor>                   TrajectoryDeltaVGradientData;
+	TArray<FLinearColor>                   TrajectoryDurationGradientData;
+	float                                  CurrentTrajectoryDisplayTime;
+	bool                                   NeedTrajectoryDisplayUpdate;
 };

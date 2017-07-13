@@ -9,7 +9,6 @@
 #include "Nova/Game/NovaGameWorld.h"
 #include "Nova/Game/NovaOrbitalSimulationComponent.h"
 
-#include "Nova/UI/Widget/NovaNavigationPanel.h"
 #include "Nova/UI/Widget/NovaButton.h"
 #include "Nova/UI/Widget/NovaSlider.h"
 
@@ -23,9 +22,6 @@
     Construct
 ----------------------------------------------------*/
 
-SNovaTrajectoryCalculator::SNovaTrajectoryCalculator() : CurrentTrajectoryDisplayTime(0), NeedTrajectoryDisplayUpdate(false)
-{}
-
 void SNovaTrajectoryCalculator::Construct(const FArguments& InArgs)
 {
 	// Get data
@@ -35,8 +31,6 @@ void SNovaTrajectoryCalculator::Construct(const FArguments& InArgs)
 	const FSlateBrush*      BackgroundBrush = FNovaStyleSet::GetBrush("Game/SB_TrajectoryCalculator");
 	MenuManager                             = InArgs._MenuManager;
 	CurrentAlpha                            = InArgs._CurrentAlpha;
-	OnTrajectoryChanged                     = InArgs._OnTrajectoryChanged;
-	AltitudeStep                            = 2;
 
 	// clang-format off
 	ChildSlot
@@ -61,12 +55,12 @@ void SNovaTrajectoryCalculator::Construct(const FArguments& InArgs)
 
 		+ SOverlay::Slot()
 		[
-			SAssignNew(Slider, SNovaSlider)
+			SNew(SNovaSlider)
 			.Panel(InArgs._Panel)
 			.Size("LargeSliderSize")
-			.Value((InArgs._MaxAltitude - InArgs._MinAltitude) / 2)
-			.MinValue(InArgs._MinAltitude)
-			.MaxValue(InArgs._MaxAltitude)
+			.Value(500)
+			.MinValue(200)
+			.MaxValue(1000)
 			.ValueStep(50)
 			.Analog(true)
 			.HelpText(LOCTEXT("AltitudeSliderHelp", "Change the intermediate altitude used to synchronize orbits"))
@@ -80,18 +74,17 @@ void SNovaTrajectoryCalculator::Construct(const FArguments& InArgs)
 				[
 					SNew(STextBlock)
 					.TextStyle(&Theme.SubtitleFont)
-					.Text(this, &SNovaTrajectoryCalculator::GetDeltaVText)
+					.Text(LOCTEXT("TestA", "24,2 m/s"))
 				]
 
 				+ SVerticalBox::Slot()
 				.HAlign(HAlign_Center)
 				.AutoHeight()
 				[
-					InArgs._Panel->SNovaNew(SNovaButton)
+					SNew(SNovaButton) // No navigation
 					.Text(LOCTEXT("MinimizeDeltaV", "Minimize Delta-V"))
-					.HelpText(LOCTEXT("MinimizeDeltaVHelp", "Configure the trajectory to minimize the Delta-V cost"))
+					.Focusable(false)
 					.Action(InArgs._DeltaVActionName)
-					.OnClicked(this, &SNovaTrajectoryCalculator::OptimizeForDeltaV)
 				]
 
 				+ SVerticalBox::Slot()
@@ -134,11 +127,10 @@ void SNovaTrajectoryCalculator::Construct(const FArguments& InArgs)
 				.HAlign(HAlign_Center)
 				.AutoHeight()
 				[
-					InArgs._Panel->SNovaNew(SNovaButton)
+					SNew(SNovaButton) // No navigation
 					.Text(LOCTEXT("MinimizeTravelTime", "Minimize travel time"))
-					.HelpText(LOCTEXT("MinimizeTravelTimeHelp", "Configure the trajectory to minimize the travel tile"))
+					.Focusable(false)
 					.Action(InArgs._DurationActionName)
-					.OnClicked(this, &SNovaTrajectoryCalculator::OptimizeForDuration)
 				]
 
 				+ SVerticalBox::Slot()
@@ -147,10 +139,10 @@ void SNovaTrajectoryCalculator::Construct(const FArguments& InArgs)
 				[
 					SNew(STextBlock)
 					.TextStyle(&Theme.SubtitleFont)
-					.Text(this, &SNovaTrajectoryCalculator::GetDurationText)
+					.Text(LOCTEXT("TestB", "56,2 hours"))
 				]
 			]
-			.OnValueChanged(this, &SNovaTrajectoryCalculator::OnAltitudeSliderChanged)
+			.OnValueChanged(InArgs._OnAltitudeChanged)
 		]
 	];
 	// clang-format on
@@ -172,26 +164,38 @@ void SNovaTrajectoryCalculator::Tick(const FGeometry& AllottedGeometry, const do
 		{
 			NLOG("SNovaTrajectoryCalculator::Tick : updating trajectories");
 
+			// Pre-process the trajectory data
+			float MinDeltaV = FLT_MAX, MaxDeltaV = 0, MinDuration = FLT_MAX, MaxDuration = 0;
+			for (FNovaTrajectoryCharacteristics& Res : SimulatedTrajectories)
+			{
+				Res.DeltaV   = FMath::LogX(10, Res.DeltaV);
+				Res.Duration = FMath::LogX(10, Res.Duration);
+
+				if (Res.DeltaV < MinDeltaV)
+				{
+					MinDeltaV = Res.DeltaV;
+				}
+				if (Res.DeltaV > MaxDeltaV && FMath::IsFinite(Res.DeltaV))
+				{
+					MaxDeltaV = Res.DeltaV;
+				}
+				if (Res.Duration < MinDuration)
+				{
+					MinDuration = Res.Duration;
+				}
+				if (Res.Duration > MaxDuration && FMath::IsFinite(Res.Duration))
+				{
+					MaxDuration = Res.Duration;
+				}
+			}
+
 			// Generate the gradients
 			TrajectoryDeltaVGradientData.Empty();
 			TrajectoryDurationGradientData.Empty();
-			for (TPair<float, TSharedPtr<FNovaTrajectory>>& AltitudeAndTrajectory : SimulatedTrajectories)
+			for (const FNovaTrajectoryCharacteristics& Res : SimulatedTrajectories)
 			{
-				TSharedPtr<FNovaTrajectory>& Trajectory = AltitudeAndTrajectory.Value;
-				NCHECK(Trajectory.IsValid());
-
-				auto Transform = [](float Value)
-				{
-					return FMath::LogX(5, Value);
-				};
-
-				double DeltaVAlpha = FMath::Clamp(
-					(Transform(Trajectory->TotalDeltaV) - Transform(MinDeltaV)) / (Transform(MaxDeltaV) - Transform(MinDeltaV)), 0.0f,
-					1.0f);
-				double DurationAlpha = FMath::Clamp((Transform(Trajectory->TotalTravelDuration) - Transform(MinDuration)) /
-														(Transform(MaxDuration) - Transform(MinDuration)),
-					0.0f, 1.0f);
-
+				double DeltaVAlpha   = FMath::Clamp((Res.DeltaV - MinDeltaV) / (MaxDeltaV - MinDeltaV), 0.0, 1.0);
+				double DurationAlpha = FMath::Clamp((Res.Duration - MinDuration) / (MaxDuration - MinDuration), 0.0, 1.0);
 				TrajectoryDeltaVGradientData.Add(FNovaStyleSet::GetPlasmaColor(DeltaVAlpha));
 				TrajectoryDurationGradientData.Add(FNovaStyleSet::GetViridisColor(DurationAlpha));
 			}
@@ -228,23 +232,14 @@ void SNovaTrajectoryCalculator::Reset()
 	SimulatedTrajectories          = {};
 	TrajectoryDeltaVGradientData   = {FLinearColor::Black, FLinearColor::Black};
 	TrajectoryDurationGradientData = {FLinearColor::Black, FLinearColor::Black};
-
-	MinDeltaV              = FLT_MAX;
-	MinDeltaVWithTolerance = FLT_MAX;
-	MaxDeltaV              = 0;
-	MinDuration            = FLT_MAX;
-	MaxDuration            = 0;
 }
 
-void SNovaTrajectoryCalculator::SimulateTrajectories(
-	const TSharedPtr<struct FNovaOrbit>& Source, const TSharedPtr<struct FNovaOrbit>& Destination)
+void SNovaTrajectoryCalculator::SimulateTrajectories(const class UNovaArea* Source, const class UNovaArea* Destination)
 {
-	NCHECK(Source.IsValid());
-	NCHECK(Destination.IsValid());
+	NCHECK(Source);
+	NCHECK(Destination);
+	NLOG("SNovaTrajectoryCalculator::SimulateTrajectories : %s -> %s", *Source->Name.ToString(), *Destination->Name.ToString());
 
-	int64 Cycles = FPlatformTime::Cycles64();
-
-	// Get the game state
 	ANovaGameState* GameState = MenuManager->GetWorld()->GetGameState<ANovaGameState>();
 	NCHECK(GameState);
 	ANovaGameWorld* GameWorld = GameState->GetGameWorld();
@@ -252,144 +247,19 @@ void SNovaTrajectoryCalculator::SimulateTrajectories(
 	UNovaOrbitalSimulationComponent* OrbitalSimulation = GameWorld->GetOrbitalSimulation();
 	NCHECK(OrbitalSimulation);
 
-	Reset();
-
 	// Run trajectory calculations over a range of altitudes
-	const TSharedPtr<FNovaTrajectoryParameters>& Parameters = OrbitalSimulation->PrepareTrajectory(Source, Destination, 1);
-	SimulatedTrajectories.Reserve((Slider->GetMaxValue() - Slider->GetMinValue()) / AltitudeStep + 1);
-	for (float Altitude = Slider->GetMinValue(); Altitude <= Slider->GetMaxValue(); Altitude += AltitudeStep)
+	SimulatedTrajectories.Empty();
+	for (float Altitude = 200; Altitude <= 1000; Altitude += 5)
 	{
-		TSharedPtr<FNovaTrajectory> Trajectory = OrbitalSimulation->ComputeTrajectory(Parameters, Altitude);
-		NCHECK(Trajectory.IsValid());
-		SimulatedTrajectories.Add(Altitude, Trajectory);
+		TSharedPtr<FNovaTrajectory>    Trajectory = OrbitalSimulation->ComputeTrajectory(Source, Destination, Altitude);
+		FNovaTrajectoryCharacteristics TrajectoryCharacteristics;
+		TrajectoryCharacteristics.IntermediateAltitude = Altitude;
+		TrajectoryCharacteristics.Duration             = Trajectory->TotalTransferDuration;
+		TrajectoryCharacteristics.DeltaV               = Trajectory->TotalDeltaV;
+		SimulatedTrajectories.Add(TrajectoryCharacteristics);
 	}
 
-	// Pre-process the trajectory data for absolute minimas and maximas
-	for (const TPair<float, TSharedPtr<FNovaTrajectory>>& AltitudeAndTrajectory : SimulatedTrajectories)
-	{
-		float                              Altitude   = AltitudeAndTrajectory.Key;
-		const TSharedPtr<FNovaTrajectory>& Trajectory = AltitudeAndTrajectory.Value;
-		NCHECK(Trajectory.IsValid());
-
-		if (FMath::IsFinite(Trajectory->TotalDeltaV) && FMath::IsFinite(Trajectory->TotalTravelDuration))
-		{
-			if (Trajectory->TotalDeltaV < MinDeltaV)
-			{
-				MinDeltaV = Trajectory->TotalDeltaV;
-			}
-			if (Trajectory->TotalDeltaV > MaxDeltaV)
-			{
-				MaxDeltaV = Trajectory->TotalDeltaV;
-			}
-			if (Trajectory->TotalTravelDuration < MinDuration)
-			{
-				MinDuration         = Trajectory->TotalTravelDuration;
-				MinDurationAltitude = Altitude;
-			}
-			if (Trajectory->TotalTravelDuration > MaxDuration)
-			{
-				MaxDuration = Trajectory->TotalTravelDuration;
-			}
-		}
-	}
-
-	// Pre-process the trajectory data again for a smarter minimum Delta-V
-	float MinDurationWithinMinDeltaV = FLT_MAX;
-	for (const TPair<float, TSharedPtr<FNovaTrajectory>>& AltitudeAndTrajectory : SimulatedTrajectories)
-	{
-		float                              Altitude   = AltitudeAndTrajectory.Key;
-		const TSharedPtr<FNovaTrajectory>& Trajectory = AltitudeAndTrajectory.Value;
-
-		if (FMath::IsFinite(Trajectory->TotalDeltaV) && FMath::IsFinite(Trajectory->TotalTravelDuration))
-		{
-			if (Trajectory->TotalDeltaV < 1.001f * MinDeltaV && Trajectory->TotalTravelDuration < MinDurationWithinMinDeltaV)
-			{
-				MinDeltaVWithTolerance     = Trajectory->TotalDeltaV;
-				MinDurationWithinMinDeltaV = Trajectory->TotalTravelDuration;
-				MinDeltaVAltitude          = Altitude;
-			}
-		}
-	}
-
-	// Complete display setup
 	NeedTrajectoryDisplayUpdate = true;
-	OptimizeForDeltaV();
-
-	NLOG("NovaTrajectoryCalculator::SimulateTrajectories : simulated %d trajectories in %.2fms", SimulatedTrajectories.Num(),
-		FPlatformTime::ToMilliseconds(FPlatformTime::Cycles64() - Cycles));
-}
-
-void SNovaTrajectoryCalculator::OptimizeForDeltaV()
-{
-	if (SimulatedTrajectories.Num())
-	{
-		NLOG("SNovaTrajectoryCalculator::OptimizeForDeltaV");
-
-		Slider->SetCurrentValue(MinDeltaVAltitude);
-		OnAltitudeSliderChanged(MinDeltaVAltitude);
-	}
-}
-
-void SNovaTrajectoryCalculator::OptimizeForDuration()
-{
-	if (SimulatedTrajectories.Num())
-	{
-		NLOG("SNovaTrajectoryCalculator::OptimizeForDuration");
-
-		Slider->SetCurrentValue(MinDurationAltitude);
-		OnAltitudeSliderChanged(MinDurationAltitude);
-	}
-}
-
-/*----------------------------------------------------
-    Callbacks
-----------------------------------------------------*/
-
-FText SNovaTrajectoryCalculator::GetDeltaVText() const
-{
-	const TSharedPtr<FNovaTrajectory>* TrajectoryPtr = SimulatedTrajectories.Find(CurrentAltitude);
-	if (TrajectoryPtr)
-	{
-		const TSharedPtr<FNovaTrajectory>& Trajectory = *TrajectoryPtr;
-		NCHECK(Trajectory.IsValid());
-
-		FNumberFormattingOptions NumberOptions;
-		NumberOptions.SetMaximumFractionalDigits(1);
-
-		return FText::FormatNamed(
-			LOCTEXT("DeltaVFormat", "{deltav} m/s"), TEXT("deltav"), FText::AsNumber(Trajectory->TotalDeltaV, &NumberOptions));
-	}
-
-	return FText();
-}
-
-FText SNovaTrajectoryCalculator::GetDurationText() const
-{
-	const TSharedPtr<FNovaTrajectory>* TrajectoryPtr = SimulatedTrajectories.Find(CurrentAltitude);
-	if (TrajectoryPtr)
-	{
-		const TSharedPtr<FNovaTrajectory>& Trajectory = *TrajectoryPtr;
-		NCHECK(Trajectory.IsValid());
-
-		return ::GetDurationText(Trajectory->TotalTravelDuration, 2);
-	}
-
-	return FText();
-}
-
-void SNovaTrajectoryCalculator::OnAltitudeSliderChanged(float Altitude)
-{
-	CurrentAltitude =
-		Slider->GetMinValue() + FMath::RoundToInt((Altitude - Slider->GetMinValue()) / static_cast<float>(AltitudeStep)) * AltitudeStep;
-
-	const TSharedPtr<FNovaTrajectory>* TrajectoryPtr = SimulatedTrajectories.Find(CurrentAltitude);
-	if (TrajectoryPtr)
-	{
-		const TSharedPtr<FNovaTrajectory>& Trajectory = *TrajectoryPtr;
-		NCHECK(Trajectory.IsValid());
-
-		OnTrajectoryChanged.ExecuteIfBound(Trajectory);
-	}
 }
 
 #undef LOCTEXT_NAMESPACE
