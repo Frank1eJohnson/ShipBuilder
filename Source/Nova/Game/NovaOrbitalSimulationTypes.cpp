@@ -8,65 +8,92 @@
 
 float FNovaTrajectory::GetHighestAltitude() const
 {
-	NCHECK(IsValid());
-
 	float MaximumAltitude = 0;
 
-	for (const FNovaOrbitGeometry& Geometry : TransferOrbits)
+	for (const FNovaOrbit& Orbit : TransferOrbits)
 	{
-		MaximumAltitude = FMath::Max(MaximumAltitude, Geometry.GetHighestAltitude());
+		MaximumAltitude = FMath::Max(MaximumAltitude, Orbit.GetHighestAltitude());
 	}
 
 	return MaximumAltitude;
 }
 
-FNovaOrbit FNovaTrajectory::GetFinalOrbit() const
+/*----------------------------------------------------
+    Trajectory database
+----------------------------------------------------*/
+
+void FNovaTrajectoryDatabase::Add(const TSharedPtr<FNovaTrajectory>& Trajectory, const TArray<FGuid>& SpacecraftIdentifiers)
 {
-	NCHECK(IsValid());
+	FNovaTrajectoryDatabaseEntry TrajectoryData;
+	TrajectoryData.Trajectory           = *Trajectory.Get();
+	TrajectoryData.SpacecraftIdentifier = SpacecraftIdentifiers;
 
-	// Assume the final maneuver is a circularization burn
-	FNovaOrbitGeometry FinalGeometry = TransferOrbits[TransferOrbits.Num() - 1];
-	FinalGeometry.StartAltitude      = FinalGeometry.OppositeAltitude;
-	FinalGeometry.StartPhase         = FMath::Fmod(FinalGeometry.EndPhase, 360.0);
+	const int32 NewTrajectoryIndex = Array.Add(TrajectoryData);
+	MarkItemDirty(Array[NewTrajectoryIndex]);
 
-	// Assume maneuvers are of zero time
-	const FNovaManeuver& FinalManeuver = Maneuvers[Maneuvers.Num() - 1];
-	const float&         InsertionTime = FinalManeuver.Time;
-
-	return FNovaOrbit(FinalGeometry, InsertionTime);
+	for (const FGuid& Identifier : SpacecraftIdentifiers)
+	{
+		Map.Add(Identifier, &Array[NewTrajectoryIndex]);
+	}
 }
 
-FNovaOrbitalLocation FNovaTrajectory::GetCurrentLocation(double CurrentTime) const
+void FNovaTrajectoryDatabase::Remove(const TArray<FGuid>& SpacecraftIdentifiers)
 {
-	const FNovaManeuver*      Maneuver = nullptr;
-	const FNovaOrbitGeometry* Geometry = nullptr;
+	bool IsDirty = false;
 
-	// Find the current maneuver
-	for (int32 ManeuverIndex = 0; ManeuverIndex < Maneuvers.Num() - 1; ManeuverIndex++)
+	for (const FGuid& Identifier : SpacecraftIdentifiers)
 	{
-		if (CurrentTime >= Maneuvers[ManeuverIndex].Time && CurrentTime <= Maneuvers[ManeuverIndex + 1].Time)
+		FNovaTrajectoryDatabaseEntry** Entry = Map.Find(Identifier);
+		if (Entry)
 		{
-			Maneuver = &Maneuvers[ManeuverIndex];
+			Array.RemoveSwap(**Entry);
+			IsDirty = true;
 		}
+
+		Map.Remove(Identifier);
 	}
 
-	// Find the current transfer orbit
-	if (Maneuver)
+	if (IsDirty)
 	{
-		for (const FNovaOrbitGeometry& Transfer : TransferOrbits)
+		MarkArrayDirty();
+	}
+}
+
+void FNovaTrajectoryDatabase::PostReplicatedChange(const TArrayView<int32>& ChangedIndices, int32 FinalSize)
+{
+	TArray<FGuid> KnownIdentifiers;
+
+	// Database insertion and update
+	int32 Index = 0;
+	for (FNovaTrajectoryDatabaseEntry& TrajectoryData : Array)
+	{
+		for (const FGuid& Identifier : TrajectoryData.SpacecraftIdentifier)
 		{
-			if (Transfer.StartPhase == Maneuver->Phase)
+			FNovaTrajectoryDatabaseEntry** Entry = Map.Find(Identifier);
+
+			// Entry was found, update if necessary
+			if (Entry)
 			{
-				Geometry = &Transfer;
+				*Entry = &TrajectoryData;
 			}
-		}
 
-		// Compute the current location
-		if (Geometry)
-		{
-			return FNovaOrbitalLocation(*Geometry, Geometry->GetCurrentPhase<false>(CurrentTime - Maneuver->Time));
+			// Entry was not found, add it
+			else
+			{
+				Map.Add(Identifier, &TrajectoryData);
+			}
+
+			KnownIdentifiers.Add(Identifier);
+			Index++;
 		}
 	}
 
-	return FNovaOrbitalLocation();
+	// Prune unused entries
+	for (auto Iterator = Map.CreateIterator(); Iterator; ++Iterator)
+	{
+		if (!KnownIdentifiers.Contains(Iterator.Key()))
+		{
+			Iterator.RemoveCurrent();
+		}
+	}
 }
