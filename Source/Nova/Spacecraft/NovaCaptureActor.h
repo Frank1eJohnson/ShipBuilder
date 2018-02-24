@@ -30,7 +30,7 @@ protected:
 	void CreateSpacecraftPawn();
 
 	/** Get a catalog instance if not already existing */
-	void CreateAssetManager();
+	void CreateCatalog();
 
 	/** Spawn a new render target */
 	void CreateRenderTarget();
@@ -85,9 +85,9 @@ protected:
 	UPROPERTY()
 	class ANovaSpacecraftPawn* SpacecraftPawn;
 
-	// Asset manager
+	// Catalog
 	UPROPERTY(Transient)
-	class UNovaAssetManager* AssetManager;
+	class UNovaAssetCatalog* Catalog;
 
 	// Render target used for rendering the assets
 	UPROPERTY(Transient)

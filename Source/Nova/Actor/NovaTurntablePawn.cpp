@@ -2,8 +2,9 @@
 
 #include "NovaTurntablePawn.h"
 
-#include "Nova/System/NovaGameInstance.h"
-#include "Nova/System/NovaMenuManager.h"
+#include "Nova/Player/NovaMenuManager.h"
+#include "Nova/Game/NovaGameInstance.h"
+
 #include "Nova/UI/NovaUITypes.h"
 #include "Nova/Nova.h"
 

@@ -4,6 +4,7 @@
 
 #include "Nova/UI/NovaUI.h"
 #include "Nova/UI/Widget/NovaMenu.h"
+#include "Nova/Tools/NovaActorTools.h"
 
 // Sub-menu types
 enum class ENovaMainMenuType : uint8

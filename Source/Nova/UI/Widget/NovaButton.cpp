@@ -4,7 +4,8 @@
 #include "NovaMenu.h"
 #include "NovaKeyLabel.h"
 
-#include "Nova/System/NovaMenuManager.h"
+#include "Nova/Player/NovaMenuManager.h"
+#include "Nova/Game/NovaGameInstance.h"
 #include "Nova/Nova.h"
 
 #include "Fonts/SlateFontInfo.h"
