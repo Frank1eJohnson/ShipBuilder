@@ -12,6 +12,7 @@
 #include "Nova/Game/NovaGameUserSettings.h"
 #include "Nova/Game/NovaWorldSettings.h"
 
+#include "Nova/Spacecraft/NovaSpacecraftPawn.h"
 #include "Nova/Spacecraft/NovaSpacecraftMovementComponent.h"
 
 #include "Nova/System/NovaAssetManager.h"
@@ -102,7 +103,10 @@ ANovaPlayerController::ANovaPlayerController()
 				Volume->Settings.RayTracingAO = GameUserSettings->EnableRaytracedAO;
 
 				// Custom settings
-		        // Material->SetScalarParameterValue("ChromaIntensity", FMath::Lerp(Current.ChromaIntensity, Target.ChromaIntensity,
+				ANovaSpacecraftPawn* SpacecraftPawn = GetSpacecraftPawn();
+				Material->SetScalarParameterValue("HighlightAlpha", IsValid(SpacecraftPawn) ? SpacecraftPawn->GetHighlightAlpha() : 0);
+				Material->SetScalarParameterValue("OutlineAlpha", IsValid(SpacecraftPawn) ? SpacecraftPawn->GetOutlineAlpha() : 0);
+				// Material->SetScalarParameterValue("ChromaIntensity", FMath::Lerp(Current.ChromaIntensity, Target.ChromaIntensity,
 		        // Alpha));
 
 				// Built-in settings (overrides)
@@ -911,5 +915,10 @@ void ANovaPlayerController::TestActor()
 {}
 
 #endif
+
+class ANovaSpacecraftPawn* ANovaPlayerController::GetSpacecraftPawn() const
+{
+	return GetPawn<class ANovaSpacecraftPawn>();
+}
 
 #undef LOCTEXT_NAMESPACE
