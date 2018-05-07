@@ -12,7 +12,6 @@
 #include "Nova/Game/NovaGameUserSettings.h"
 #include "Nova/Game/NovaWorldSettings.h"
 
-#include "Nova/Spacecraft/NovaSpacecraftPawn.h"
 #include "Nova/Spacecraft/NovaSpacecraftMovementComponent.h"
 
 #include "Nova/System/NovaAssetManager.h"
@@ -915,10 +914,5 @@ void ANovaPlayerController::TestActor()
 {}
 
 #endif
-
-class ANovaSpacecraftPawn* ANovaPlayerController::GetSpacecraftPawn() const
-{
-	return GetPawn<class ANovaSpacecraftPawn>();
-}
 
 #undef LOCTEXT_NAMESPACE

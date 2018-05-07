@@ -3,8 +3,8 @@
 #pragma once
 
 #include "NovaPostProcessComponent.h"
+#include "Nova/Spacecraft/NovaSpacecraftPawn.h"
 #include "Nova/System/NovaGameInstance.h"
-#include "Nova/Spacecraft/NovaSpacecraft.h"
 #include "Nova/UI/NovaUITypes.h"
 
 #include "CoreMinimal.h"
@@ -283,8 +283,11 @@ public:
 
 	/** Get a turntable actor */
 	UFUNCTION(Category = Nova, BlueprintCallable)
-	class ANovaSpacecraftPawn* GetSpacecraftPawn() const;
+	class ANovaSpacecraftPawn* GetSpacecraftPawn() const
+	{
+		return GetPawn<ANovaSpacecraftPawn>();
+	}
 
 	/** Get the player spacecraft */
-	const FNovaSpacecraft* GetSpacecraft() const;
+	const struct FNovaSpacecraft* GetSpacecraft() const;
 };
