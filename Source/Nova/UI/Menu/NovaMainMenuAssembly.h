@@ -5,10 +5,12 @@
 #include "Nova/UI/NovaUI.h"
 #include "Nova/UI/Widget/NovaTabView.h"
 #include "Nova/UI/Widget/NovaModalListView.h"
-
-#include "Nova/Spacecraft/NovaSpacecraftPawn.h"
+#include "Nova/Game/NovaGameTypes.h"
 
 #include "Online.h"
+
+enum class ENovaAssemblyDisplayFilter : uint8;
+enum class ENovaHullType : uint8;
 
 class SNovaMainMenuAssembly : public SNovaTabPanel
 {
@@ -84,7 +86,7 @@ protected:
 
 protected:
 	// Helpers
-	TSharedRef<SWidget> GenerateAssetItem(const UNovaAssetDescription* Asset) const;
+	TSharedRef<SWidget> GenerateAssetItem(const class UNovaAssetDescription* Asset) const;
 	FText               GetAssetName(const class UNovaAssetDescription* Asset) const;
 
 	// Panels
@@ -118,7 +120,6 @@ protected:
 	bool               IsAddCompartmentEnabled(bool Forward) const;
 	bool               IsBackToAssemblyEnabled() const;
 	bool               IsEditCompartmentEnabled() const;
-	bool               IsToggleHighlightEnabled() const;
 
 	// Key bindings
 	FKey GetPreviousCompartmentKey() const;
@@ -150,9 +151,6 @@ protected:
 	// Exit compartment details
 	void OnBackToAssembly();
 
-	// Display options
-	void OnToggleHighlight();
-
 	/*----------------------------------------------------
 	    Data
 	----------------------------------------------------*/
@@ -165,8 +163,7 @@ protected:
 	TSharedPtr<SHorizontalBox>        CompartmentBox;
 	TSharedPtr<SVerticalBox>          ModuleBox;
 	TSharedPtr<SVerticalBox>          EquipmentBox;
-	TSharedPtr<class SNovaButton>     HighlightButton;
-	TSharedPtr<class SNovaButton>     EditCompartmentButton;
+	TSharedPtr<class SNovaButton>     SaveCompartmentButton;
 	TSharedPtr<class SNovaModalPanel> ModalPanel;
 	TSharedPtr<SVerticalBox>          MenuBox;
 
@@ -178,9 +175,6 @@ protected:
 	// Assembly data
 	int32 SelectedCompartmentIndex;
 	int32 EditedCompartmentIndex;
-
-	// Compartment list
-	TSharedPtr<SNovaCompartmentList> CompartmentListView;
 
 	// Compartment hull  list
 	TArray<ENovaHullType>         HullTypeList;
