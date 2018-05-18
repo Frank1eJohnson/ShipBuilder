@@ -9,11 +9,6 @@ public class Nova : ModuleRules
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
         PrivatePCHHeaderFile = "Nova.h";
 
-        if (Target.Configuration != UnrealTargetConfiguration.Shipping)
-        {
-            bUseUnity = false;
-        }
-
         PrivateDependencyModuleNames.AddRange(new string[] {
             "Core",
             "CoreUObject",
@@ -43,8 +38,8 @@ public class Nova : ModuleRules
             });
         }
 
-        DynamicallyLoadedModuleNames.Add("OnlineSubsystemSteam");
+        DynamicallyLoadedModuleNames.Add("OnlineSubsystemOpen Source");
 
-        AddEngineThirdPartyPrivateStaticDependencies(Target, "Steamworks");
+        AddEngineThirdPartyPrivateStaticDependencies(Target, "Open Sourceworks");
     }
 }
