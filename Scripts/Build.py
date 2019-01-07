@@ -5,7 +5,7 @@
 # Package the game for distribution - make sure to configure project.json
 # Usage : Build.py <absolute-output-dir>
 # 
-# Gwennaël Arbona 2021
+# Gwennaël Arbona 2019
 #-------------------------------------------------------------------------------
 
 import re
@@ -37,12 +37,12 @@ sourceEngine =               projectConfig.get('sourceEngine')
 projectConfigFile.close()
 
 # Get version tag
-gitCommand = ['git', 'describe', '--tags']
+gitCommand = ['git', 'describe']
 try:
-	buildVersion = subprocess.check_output(gitCommand).decode('utf-8')
+	buildVersion = subprocess.check_output(gitCommand, stdout=open(os.devnull, 'wb')).decode('utf-8')
 	buildVersion = buildVersion.replace('\n', '');
 except:
-	sys.exit('Git describe failed')
+	buildVersion = 'master'
 
 
 #-------------------------------------------------------------------------------
@@ -78,11 +78,6 @@ else:
 # Generate paths
 projectFile = os.path.join(os.getcwd(), '..', projectName + '.uproject')
 engineBuildTool = os.path.join(engineDir, 'Engine', 'Build', 'BatchFiles', 'RunUAT.bat')
-
-# Clean up output path
-releaseOutputDir = os.path.join(os.getcwd(), '..', 'Releases', buildVersion)
-if os.path.exists(releaseOutputDir):
-	shutil.rmtree(releaseOutputDir)
 
 
 #-------------------------------------------------------------------------------
@@ -123,44 +118,34 @@ for platform in projectPlatforms:
 
 		# Cook
 		'-cook',
-		'-skipcookingeditorcontent',
 		'-createreleaseversion=' + buildVersion,
 
 		# Package
 		'-stage', 
 		'-package',
-		'-pak',
-		'-compressed',
+		'-pak', '-compressed',
 		'-distribution',
 		'-archive', '-archivedirectory="' + outputDir + '"'
 	])
-			
+
 	# Post-processing of generated files
 	for root, directories, filenames in os.walk(buildOutputDir):
 		for filename in filenames:
 			
 			absoluteFilename = str(os.path.join(root, filename))
-			baseChunkName = projectName + '-' + platform + '-'
 		
 			# Wipe generated files that aren't needed
 			if re.match('.*\.((pdb)|(debug))', filename):
 				if 'ThirdParty' in root or not projectKeepPdbs:
-					shutil.move(absoluteFilename, releaseOutputDir)
+					os.remove(absoluteFilename)
 			elif re.match('Manifest.*\.txt', filename):
 				os.remove(absoluteFilename)
-				
-			# Rename optional chunks
-			chunkMatch = re.search('pakchunk([0-9]+)optional.*\.pak', filename)
-			if chunkMatch:
-				absoluteChunkFilename = str(os.path.join(root, baseChunkName + chunkMatch.group(1) + 'b.pak'))
-				os.rename(absoluteFilename, absoluteChunkFilename)
 	
-			# Rename normal chunks
-			else:
-				chunkMatch = re.search('pakchunk([0-9]+).*\.pak', filename)
-				if chunkMatch:
-					absoluteChunkFilename = str(os.path.join(root, baseChunkName + chunkMatch.group(1) + '.pak'))
-					os.rename(absoluteFilename, absoluteChunkFilename)
+			# Rename chunks
+			chunkMatch = re.search('pakchunk([0-9]+).*\.pak', filename)
+			if chunkMatch:
+				absoluteChunkFilename = str(os.path.join(root, projectName + '-' + platform + '-' + chunkMatch.group(1) + '.pak'))
+				os.rename(absoluteFilename, absoluteChunkFilename)
 	
 	# Remove engine content - only debug stuff
 	shutil.rmtree(os.path.join(buildOutputDir, 'Engine', 'Content'))
