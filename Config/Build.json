@@ -1,14 +1,19 @@
 {
-	"name": "Nova",
+	"name": "ShipBuilder",
 	"platforms": ["Win64", "Linux"],
 	"configuration": "Shipping",
 	"pdb": false,
 	"outputDir": "..\\Packaged",
+	
 	"itch": 
 	{
-		"user": "deimos-games",
-		"project": "gaia",
+		"project": "nova",
 		"branches": ["windows", "linux"],
 		"directories": ["WindowsNoEditor", "LinuxNoEditor"]
+	},
+	
+	"open source":
+	{
+		"apps": ["Open SourceWindows.vdf", "Open SourceLinux.vdf"]
 	}
 }
