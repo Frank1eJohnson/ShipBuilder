@@ -82,7 +82,6 @@ protected:
 	void OnAntiAliasingChanged(float Value);
 	void OnScreenPercentageChanged(float Value);
 	void OnDLSSToggled();
-	void OnLumenToggled();
 	void OnRaytracedShadowsToggled();
 	void OnRaytracedAOToggled();
 	void OnCinematicBloomToggled();
@@ -147,7 +146,6 @@ protected:
 	TSharedPtr<class SNovaSlider> AntiAliasingSlider;
 	TSharedPtr<class SNovaSlider> ScreenPercentageSlider;
 	TSharedPtr<class SNovaButton> DLSSButton;
-	TSharedPtr<class SNovaButton> LumenButton;
 	TSharedPtr<class SNovaButton> RaytracedShadowsButton;
 	TSharedPtr<class SNovaButton> RaytracedAOutton;
 	TSharedPtr<class SNovaButton> CinematicBloomButton;
