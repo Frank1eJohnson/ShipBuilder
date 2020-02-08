@@ -110,13 +110,13 @@ void UNovaPreviableTradableAssetDescription::ConfigurePreviewActor(class AActor*
 	NCHECK(Actor->GetClass() == AStaticMeshActor::StaticClass());
 	AStaticMeshActor* MeshActor = Cast<AStaticMeshActor>(Actor);
 
-	if (!PreviewMesh.IsNull())
+	if (PreviewMesh.IsValid())
 	{
 		PreviewMesh.LoadSynchronous();
 		MeshActor->GetStaticMeshComponent()->SetStaticMesh(PreviewMesh.Get());
 	}
 
-	if (!PreviewMaterial.IsNull())
+	if (PreviewMaterial.IsValid())
 	{
 		PreviewMaterial.LoadSynchronous();
 		MeshActor->GetStaticMeshComponent()->SetMaterial(0, PreviewMaterial.Get());

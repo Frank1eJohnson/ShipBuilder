@@ -483,7 +483,7 @@ void ANovaSpacecraftPawn::StartAssemblyUpdate()
 					}
 				}
 			}
-			for (const UNovaEquipmentDescription* Equipment : Compartment.Equipment)
+			for (const UNovaEquipmentDescription* Equipment : Compartment.Equipments)
 			{
 				if (Equipment)
 				{
@@ -677,11 +677,11 @@ void ANovaSpacecraftPawn::UpdateDisplayFilter()
 								break;
 
 							case ENovaAssemblyElementType::Equipment:
-								DisplayState = DisplayFilterType >= ENovaAssemblyDisplayFilter::ModulesStructureEquipment;
+								DisplayState = DisplayFilterType >= ENovaAssemblyDisplayFilter::ModulesStructureEquipments;
 								break;
 
 							case ENovaAssemblyElementType::Wiring:
-								DisplayState = DisplayFilterType >= ENovaAssemblyDisplayFilter::ModulesStructureEquipmentWiring;
+								DisplayState = DisplayFilterType >= ENovaAssemblyDisplayFilter::ModulesStructureEquipmentsWiring;
 								break;
 
 							case ENovaAssemblyElementType::Hull:

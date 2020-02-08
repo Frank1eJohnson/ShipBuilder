@@ -15,7 +15,7 @@ UENUM()
 enum class ENovaEquipmentType : uint8
 {
 	Standard,
-	Aft
+	Engine
 };
 
 /** Type of bulkhead to use */
@@ -293,13 +293,9 @@ public:
 	UPROPERTY(Category = Elements, EditDefaultsOnly)
 	TSoftObjectPtr<class UStaticMesh> OuterHull = nullptr;
 
-	// Tank skirt - forward side of the module behind will be empty
+	// Skirt bulkhead - forward side of the module behind will be empty
 	UPROPERTY(Category = Elements, EditDefaultsOnly)
-	TSoftObjectPtr<class UStaticMesh> TankSkirt = nullptr;
-
-	// Cargo skirt - forward side of the module behind will be empty
-	UPROPERTY(Category = Elements, EditDefaultsOnly)
-	TSoftObjectPtr<class UStaticMesh> CargoSkirt = nullptr;
+	TSoftObjectPtr<class UStaticMesh> SkirtBulkhead = nullptr;
 
 	// Compartment mass in T
 	UPROPERTY(Category = Properties, EditDefaultsOnly)
@@ -313,7 +309,7 @@ public:
 	UPROPERTY(Category = Properties, EditDefaultsOnly)
 	TArray<FNovaEquipmentSlot> EquipmentSlots;
 
-	// Groups of equipment slot that require identical equipment
+	// Groups of equipment slot that require identical equipments
 	UPROPERTY(Category = Properties, EditDefaultsOnly)
 	TArray<FNovaEquipmentSlotGroup> EquipmentSlotsGroups;
 };

@@ -164,7 +164,7 @@ protected:
 	FNovaAssemblyElement MainHull{ENovaAssemblyElementType::Hull};
 	FNovaAssemblyElement OuterHull{ENovaAssemblyElementType::Hull};
 
-	// Modules & equipment
+	// Modules & equipments
 	FNovaModuleAssembly    Modules[ENovaConstants::MaxModuleCount];
-	FNovaEquipmentAssembly Equipment[ENovaConstants::MaxEquipmentCount];
+	FNovaEquipmentAssembly Equipments[ENovaConstants::MaxEquipmentCount];
 };

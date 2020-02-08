@@ -357,7 +357,7 @@ void SNovaMainMenuAssembly::Construct(const FArguments& InArgs)
 									SNovaNew(SNovaButton)
 									.Action(FNovaPlayerInput::MenuSecondary)
 									.Text(LOCTEXT("EditCompartment", "Edit compartment"))
-									.HelpText(LOCTEXT("EditCompartmentHelp", "Add modules and equipment to the selected compartment"))
+									.HelpText(LOCTEXT("EditCompartmentHelp", "Add modules and equipments to the selected compartment"))
 									.Enabled(this, &SNovaMainMenuAssembly::IsEditCompartmentEnabled)
 									.OnClicked(this, &SNovaMainMenuAssembly::OnEditCompartment)
 								]
@@ -464,7 +464,7 @@ void SNovaMainMenuAssembly::Construct(const FArguments& InArgs)
 										[
 											SNew(STextBlock)
 											.TextStyle(&Theme.HeadingFont)
-											.Text(LOCTEXT("EquipmentTitle", "Equipment"))
+											.Text(LOCTEXT("EquipmentsTitle", "Equipments"))
 										]
 
 										+ SVerticalBox::Slot()
@@ -870,8 +870,8 @@ void SNovaMainMenuAssembly::Construct(const FArguments& InArgs)
 									return &Compartment.Description->AssetRender;
 								}
 							}
-							
-							return &UNovaAssetManager::Get()->GetDefaultAsset<UNovaCompartmentDescription>()->AssetRender;
+
+							return nullptr;
 						}))
 					]
 				]
@@ -950,7 +950,7 @@ void SNovaMainMenuAssembly::Construct(const FArguments& InArgs)
 								}
 							}
 
-							return &UNovaAssetManager::Get()->GetDefaultAsset<UNovaModuleDescription>()->AssetRender;
+							return nullptr;
 						}))
 					]
 				]
@@ -992,7 +992,7 @@ void SNovaMainMenuAssembly::Construct(const FArguments& InArgs)
 			SNew(SNovaButton) // No navigation
 			.Focusable(false)
 			.Size("CompartmentButtonSize")
-			.HelpText(this, &SNovaMainMenuAssembly::GetEquipmentHelpText, EquipmentIndex)
+			.HelpText(FText::FormatNamed(LOCTEXT("EquipmentSlotFormat", "Select equipment slot {slot}"), TEXT("slot"), FText::AsNumber(EquipmentIndex + 1)))
 			.Enabled(this, &SNovaMainMenuAssembly::IsEquipmentEnabled, EquipmentIndex)
 			.OnClicked(this, &SNovaMainMenuAssembly::SetSelectedModuleOrEquipment, GetCommonIndexFromEquipment(EquipmentIndex))
 			.OnDoubleClicked(FSimpleDelegate::CreateLambda([=]()
@@ -1020,14 +1020,14 @@ void SNovaMainMenuAssembly::Construct(const FArguments& InArgs)
 							const FNovaCompartment* Compartment = GetEditedCompartment();
 							if (Compartment)
 							{
-								const UNovaEquipmentDescription* Equipment = Compartment->Equipment[EquipmentIndex];
+								const UNovaEquipmentDescription* Equipment = Compartment->Equipments[EquipmentIndex];
 								if (IsValid(Equipment))
 								{
 									return &Equipment->AssetRender;
 								}
 							}
-							
-							return &UNovaAssetManager::Get()->GetDefaultAsset<UNovaEquipmentDescription>()->AssetRender;
+
+							return nullptr;
 						}))
 					]
 				]
@@ -1388,7 +1388,7 @@ void SNovaMainMenuAssembly::SetSelectedModuleOrEquipment(int32 Index)
 			SelectedModuleOrEquipmentIndex = Index;
 		}
 
-		// Skip over invalid modules & equipment
+		// Skip over invalid modules & equipments
 		else if (SelectedModuleOrEquipmentIndex != INDEX_NONE)
 		{
 			int32 Step          = FMath::Sign(Index - SelectedModuleOrEquipmentIndex);
@@ -1426,8 +1426,8 @@ void SNovaMainMenuAssembly::SetSelectedModuleOrEquipment(int32 Index)
 		else
 		{
 			int32 EquipmentIndex = GetSelectedEquipmentIndex();
-			EquipmentList        = SpacecraftPawn->GetCompatibleEquipment(EditedCompartmentIndex, EquipmentIndex);
-			EquipmentListView->Refresh(EquipmentList.Find(Compartment.Equipment[EquipmentIndex]));
+			EquipmentList        = SpacecraftPawn->GetCompatibleEquipments(EditedCompartmentIndex, EquipmentIndex);
+			EquipmentListView->Refresh(EquipmentList.Find(Compartment.Equipments[EquipmentIndex]));
 		}
 	}
 }
@@ -1528,7 +1528,6 @@ TSharedRef<SWidget> SNovaMainMenuAssembly::GenerateModuleItem(const UNovaModuleD
 {
 	return SNew(SNovaTradableAssetItem)
 		.Asset(Module)
-		.DefaultAsset(UNovaAssetManager::Get()->GetDefaultAsset<UNovaModuleDescription>())
 		.GameState(GameState)
 		.NoPriceHint(true)
 		.SelectionIcon(TAttribute<const FSlateBrush*>::Create(TAttribute<const FSlateBrush*>::FGetter::CreateLambda(
@@ -1568,7 +1567,6 @@ TSharedRef<SWidget> SNovaMainMenuAssembly::GenerateEquipmentItem(const UNovaEqui
 {
 	return SNew(SNovaTradableAssetItem)
 		.Asset(Equipment)
-		.DefaultAsset(UNovaAssetManager::Get()->GetDefaultAsset<UNovaEquipmentDescription>())
 		.GameState(GameState)
 		.NoPriceHint(true)
 		.SelectionIcon(TAttribute<const FSlateBrush*>::Create(TAttribute<const FSlateBrush*>::FGetter::CreateLambda(
@@ -1580,8 +1578,7 @@ TSharedRef<SWidget> SNovaMainMenuAssembly::GenerateEquipmentItem(const UNovaEqui
 
 FText SNovaMainMenuAssembly::GetEquipmentListTitle(const UNovaEquipmentDescription* Equipment) const
 {
-	return FText::FormatNamed(
-		LOCTEXT("EquipmentTitleFormat", "Change equipment ({equipment})"), TEXT("equipment"), GetAssetName(Equipment));
+	return FText::FormatNamed(LOCTEXT("EquipmentTitle", "Change equipment ({equipment})"), TEXT("equipment"), GetAssetName(Equipment));
 }
 
 FText SNovaMainMenuAssembly::GenerateEquipmentTooltip(const UNovaEquipmentDescription* Equipment) const
@@ -1600,11 +1597,10 @@ FText SNovaMainMenuAssembly::GenerateEquipmentTooltip(const UNovaEquipmentDescri
     Compartment hull type list
 ----------------------------------------------------*/
 
-TSharedRef<SWidget> SNovaMainMenuAssembly::GenerateHullTypeItem(const UNovaHullDescription* Hull) const
+TSharedRef<SWidget> SNovaMainMenuAssembly::GenerateHullTypeItem(const class UNovaHullDescription* Hull) const
 {
 	return SNew(SNovaTradableAssetItem)
 		.Asset(Hull)
-		.DefaultAsset(UNovaAssetManager::Get()->GetDefaultAsset<UNovaHullDescription>())
 		.GameState(GameState)
 		.NoPriceHint(true)
 		.SelectionIcon(TAttribute<const FSlateBrush*>::Create(TAttribute<const FSlateBrush*>::FGetter::CreateLambda(
@@ -1614,12 +1610,12 @@ TSharedRef<SWidget> SNovaMainMenuAssembly::GenerateHullTypeItem(const UNovaHullD
 			})));
 }
 
-FText SNovaMainMenuAssembly::GetHullTypeListTitle(const UNovaHullDescription* Hull) const
+FText SNovaMainMenuAssembly::GetHullTypeListTitle(const class UNovaHullDescription* Hull) const
 {
 	return FText::FormatNamed(LOCTEXT("HullTypeTitle", "Change hull type ({hull})"), TEXT("hull"), GetAssetName(Hull));
 }
 
-FText SNovaMainMenuAssembly::GenerateHullTypeTooltip(const UNovaHullDescription* Hull) const
+FText SNovaMainMenuAssembly::GenerateHullTypeTooltip(const class UNovaHullDescription* Hull) const
 {
 	if (IsValid(Hull))
 	{
@@ -1676,10 +1672,10 @@ FText SNovaMainMenuAssembly::GetSelectedFilterText() const
 			case ENovaAssemblyDisplayFilter::ModulesStructure:
 				return LOCTEXT("ModulesStructure", "Modules & structure");
 				break;
-			case ENovaAssemblyDisplayFilter::ModulesStructureEquipment:
-				return LOCTEXT("ModulesStructureEquipments", "Modules, structure, equipment");
+			case ENovaAssemblyDisplayFilter::ModulesStructureEquipments:
+				return LOCTEXT("ModulesStructureEquipments", "Modules, structure, equipments");
 				break;
-			case ENovaAssemblyDisplayFilter::ModulesStructureEquipmentWiring:
+			case ENovaAssemblyDisplayFilter::ModulesStructureEquipmentsWiring:
 				return LOCTEXT("ModulesStructureEquipmentsWiring", "All internal systems");
 				break;
 			case ENovaAssemblyDisplayFilter::All:
@@ -1757,25 +1753,17 @@ bool SNovaMainMenuAssembly::IsModuleEnabled(int32 ModuleIndex, FText* Help) cons
 	if (IsCompartmentPanelVisible() && IsValid(SpacecraftPawn))
 	{
 		const FNovaCompartment& Compartment = SpacecraftPawn->GetCompartment(SelectedCompartmentIndex);
-
 		if (ModuleIndex >= Compartment.Description->ModuleSlots.Num())
 		{
 			return false;
 		}
-		else if (IsValid(Compartment.Modules[ModuleIndex].Description) && Compartment.GetCurrentCargoMass() > 0 &&
-				 Compartment.Modules[ModuleIndex].Description->IsA<UNovaCargoModuleDescription>())
+
+		if (IsValid(Compartment.Modules[ModuleIndex].Description) && Compartment.GetCurrentCargoMass() > 0 &&
+			Compartment.Modules[ModuleIndex].Description->IsA<UNovaCargoModuleDescription>())
 		{
 			if (Help)
 			{
 				*Help = LOCTEXT("ModuleHasCargo", "This module cannot be changed because it holds cargo");
-			}
-			return false;
-		}
-		else if (SpacecraftPawn->GetCompatibleModules(SelectedCompartmentIndex, ModuleIndex).Num() == 1)
-		{
-			if (Help)
-			{
-				*Help = LOCTEXT("ModuleHasNoChoice", "There is no available module for this slot");
 			}
 			return false;
 		}
@@ -1786,41 +1774,12 @@ bool SNovaMainMenuAssembly::IsModuleEnabled(int32 ModuleIndex, FText* Help) cons
 	return false;
 }
 
-FText SNovaMainMenuAssembly::GetEquipmentHelpText(int32 EquipmentIndex) const
-{
-	FText Help;
-
-	if (IsEquipmentEnabled(EquipmentIndex, &Help) || Help.IsEmpty())
-	{
-		return FText::FormatNamed(
-			LOCTEXT("EquipmentSlotFormat", "Select equipment slot {slot}"), TEXT("slot"), FText::AsNumber(EquipmentIndex + 1));
-	}
-	else
-	{
-		return Help;
-	}
-}
-
-bool SNovaMainMenuAssembly::IsEquipmentEnabled(int32 EquipmentIndex, FText* Help) const
+bool SNovaMainMenuAssembly::IsEquipmentEnabled(int32 EquipmentIndex) const
 {
 	if (IsCompartmentPanelVisible() && IsValid(SpacecraftPawn))
 	{
 		const FNovaCompartment& Compartment = SpacecraftPawn->GetCompartment(SelectedCompartmentIndex);
-
-		if (EquipmentIndex >= Compartment.Description->EquipmentSlots.Num())
-		{
-			return false;
-		}
-		else if (SpacecraftPawn->GetCompatibleEquipment(SelectedCompartmentIndex, EquipmentIndex).Num() == 1)
-		{
-			if (Help)
-			{
-				*Help = LOCTEXT("EquipmentHasNoChoice", "There is no available equipment for this slot");
-			}
-			return false;
-		}
-
-		return true;
+		return EquipmentIndex < Compartment.Description->EquipmentSlots.Num();
 	}
 
 	return false;
@@ -1849,7 +1808,7 @@ FText SNovaMainMenuAssembly::GetModuleOrEquipmentText()
 			int32 EquipmentIndex = GetSelectedEquipmentIndex();
 			if (EquipmentIndex < Compartment.Description->EquipmentSlots.Num())
 			{
-				const UNovaEquipmentDescription* Equipment     = Compartment.Equipment[EquipmentIndex];
+				const UNovaEquipmentDescription* Equipment     = Compartment.Equipments[EquipmentIndex];
 				FText                            EquipmentText = Equipment ? Equipment->GetInlineDescription()
 																		   : LOCTEXT("EmptyEquipment", "<img src=\"/Text/Equipment\"/> Empty equipment slot");
 
@@ -2049,7 +2008,7 @@ void SNovaMainMenuAssembly::OnSelectedFilterChanged(float Value)
 }
 
 /*----------------------------------------------------
-    Modules & equipment
+    Modules & equipments
 ----------------------------------------------------*/
 
 void SNovaMainMenuAssembly::OnSelectedModuleChanged(const UNovaModuleDescription* Module, int32 Index)
@@ -2075,7 +2034,7 @@ void SNovaMainMenuAssembly::OnSelectedEquipmentChanged(const UNovaEquipmentDescr
 
 	if (IsValid(SpacecraftPawn))
 	{
-		SpacecraftPawn->GetCompartment(EditedCompartmentIndex).Equipment[SlotIndex] = Equipment;
+		SpacecraftPawn->GetCompartment(EditedCompartmentIndex).Equipments[SlotIndex] = Equipment;
 		SpacecraftPawn->RequestAssemblyUpdate();
 	}
 }
@@ -2126,7 +2085,7 @@ void SNovaMainMenuAssembly::OnHullPaintSelected(const UNovaStructuralPaintDescri
 	HullPaintListView->SetInitiallySelectedIndex(Index);
 }
 
-void SNovaMainMenuAssembly::OnDetailPaintSelected(const UNovaPaintDescription* Paint, int32 Index)
+void SNovaMainMenuAssembly::OnDetailPaintSelected(const class UNovaPaintDescription* Paint, int32 Index)
 {
 	NLOG("SNovaMainMenuAssembly::OnDetailPaintSelected : %d", Index);
 

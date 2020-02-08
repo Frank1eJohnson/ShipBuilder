@@ -13,6 +13,10 @@
 
 #define LOCTEXT_NAMESPACE "NovaSpacecraft"
 
+// Constants
+constexpr float StandardGravity           = 9.807f;
+constexpr float SkirtPropellantMultiplier = 1.1f;
+
 /*----------------------------------------------------
     Spacecraft compartment
 ----------------------------------------------------*/
@@ -29,7 +33,7 @@ FNovaCompartment::FNovaCompartment()
 	: Description(nullptr)
 	, HullType(nullptr)
 	, Modules{FNovaCompartmentModule()}
-	, Equipment{nullptr}
+	, Equipments{nullptr}
 	, NeedsOuterSkirt(false)
 	, NeedsMainPiping(false)
 	, NeedsMainWiring(false)
@@ -57,7 +61,7 @@ bool FNovaCompartment::operator==(const FNovaCompartment& Other) const
 		}
 		for (int32 EquipmentIndex = 0; EquipmentIndex < ENovaConstants::MaxEquipmentCount; EquipmentIndex++)
 		{
-			if (Equipment[EquipmentIndex] != Other.Equipment[EquipmentIndex])
+			if (Equipments[EquipmentIndex] != Other.Equipments[EquipmentIndex])
 			{
 				return false;
 			}
@@ -90,7 +94,7 @@ const UNovaEquipmentDescription* FNovaCompartment::GetEquipmentySocket(FName Soc
 		{
 			if (Description->GetEquipmentSlot(EquipmentIndex).SocketName == SocketName)
 			{
-				return Equipment[EquipmentIndex];
+				return Equipments[EquipmentIndex];
 			}
 		}
 	}
@@ -236,7 +240,7 @@ FNovaSpacecraftCompartmentMetrics::FNovaSpacecraftCompartmentMetrics(const FNova
 
 						if (Spacecraft.IsSameModuleInNextCompartment(CompartmentIndex, ModuleIndex))
 						{
-							PropellantMass *= ENovaConstants::SkirtCapacityMultiplier;
+							PropellantMass *= SkirtPropellantMultiplier;
 						}
 
 						PropellantMassCapacity += PropellantMass;
@@ -246,27 +250,20 @@ FNovaSpacecraftCompartmentMetrics::FNovaSpacecraftCompartmentMetrics(const FNova
 					const UNovaCargoModuleDescription* CargoModule = Cast<UNovaCargoModuleDescription>(Module.Description);
 					if (CargoModule)
 					{
-						float CargoMass = CargoModule->CargoMass;
-
-						if (Spacecraft.IsSameModuleInNextCompartment(CompartmentIndex, ModuleIndex))
-						{
-							CargoMass *= ENovaConstants::SkirtCapacityMultiplier;
-						}
-
-						CargoMassCapacity += CargoMass;
+						CargoMassCapacity += CargoModule->CargoMass;
 					}
 				}
 			}
 
-			// Iterate over equipment
-			for (const UNovaEquipmentDescription* Equipment : Compartment.Equipment)
+			// Iterate over equipments
+			for (const UNovaEquipmentDescription* Equipment : Compartment.Equipments)
 			{
 				if (IsValid(Equipment))
 				{
 					EquipmentCount++;
 					DryMass += Equipment->Mass;
 
-					// Handle engine equipment
+					// Handle engine equipments
 					const UNovaEngineDescription* Engine = Cast<UNovaEngineDescription>(Equipment);
 					if (Engine)
 					{
@@ -295,8 +292,10 @@ TArray<FText> FNovaSpacecraftCompartmentMetrics::GetDescription() const
 
 	if (EquipmentCount)
 	{
-		Result.Add(FText::FormatNamed(LOCTEXT("CompartmentEquipmentFormat", "<img src=\"/Text/Equipment\"/> {equipment} equipment"),
-			TEXT("equipment"), FText::AsNumber(EquipmentCount)));
+		Result.Add(
+			FText::FormatNamed(LOCTEXT("CompartmentEquipmentsFormat",
+								   "<img src=\"/Text/Equipment\"/> {equipments} {equipments}|plural(one=equipment,other=equipments)"),
+				TEXT("equipments"), FText::AsNumber(EquipmentCount)));
 	}
 
 	if (PropellantMassCapacity)
@@ -386,16 +385,16 @@ bool FNovaSpacecraft::IsValid(FText* Details) const
 		{
 			for (int32 EquipmentIndex = 0; EquipmentIndex < ENovaConstants::MaxEquipmentCount; EquipmentIndex++)
 			{
-				const UNovaEquipmentDescription* Equipment = Compartment.Equipment[EquipmentIndex];
+				const UNovaEquipmentDescription* Equipment = Compartment.Equipments[EquipmentIndex];
 				if (Equipment && Equipment->RequiresPairing)
 				{
 					for (int32 GroupedIndex : Compartment.Description->GetGroupedEquipmentSlotsIndices(EquipmentIndex))
 					{
-						if (Compartment.Equipment[GroupedIndex] != Equipment)
+						if (Compartment.Equipments[GroupedIndex] != Equipment)
 						{
 							Issues.Add(FText::FormatNamed(LOCTEXT("InvalidPairing",
 															  "The equipment in slot {slot} of compartment {compartment} is not "
-															  "correctly paired with symmetrical equipment"),
+															  "correctly paired with symmetrical equipments"),
 								TEXT("slot"), Compartment.Description->GetEquipmentSlot(EquipmentIndex).DisplayName, TEXT("compartment"),
 								FText::AsNumber(CompartmentIndex + 1)));
 						}
@@ -489,7 +488,7 @@ FNovaSpacecraftUpgradeCost FNovaSpacecraft::GetUpgradeCost(const ANovaGameState*
 
 			for (int32 EquipmentIndex = 0; EquipmentIndex < ENovaConstants::MaxEquipmentCount; EquipmentIndex++)
 			{
-				UpdatePartsData(Compartment.Equipment[EquipmentIndex], Add);
+				UpdatePartsData(Compartment.Equipments[EquipmentIndex], Add);
 			}
 		}
 	};
@@ -594,11 +593,11 @@ void FNovaSpacecraft::SerializeJson(TSharedPtr<FNovaSpacecraft>& This, TSharedPt
 						CompartmentJsonData, FString("M") + FString::FromInt(Index), Compartment.Modules[Index].Description);
 				}
 
-				// Equipment
+				// Equipments
 				for (int32 Index = 0; Index < ENovaConstants::MaxEquipmentCount; Index++)
 				{
 					UNovaAssetDescription::SaveAsset(
-						CompartmentJsonData, FString("E") + FString::FromInt(Index), Compartment.Equipment[Index]);
+						CompartmentJsonData, FString("E") + FString::FromInt(Index), Compartment.Equipments[Index]);
 				}
 
 				SavedCompartments.Add(MakeShared<FJsonValueObject>(CompartmentJsonData));
@@ -689,10 +688,10 @@ void FNovaSpacecraft::SerializeJson(TSharedPtr<FNovaSpacecraft>& This, TSharedPt
 						CompartmentJsonData, FString("M") + FString::FromInt(Index));
 				}
 
-				// Equipment
+				// Equipments
 				for (int32 Index = 0; Index < ENovaConstants::MaxEquipmentCount; Index++)
 				{
-					Compartment.Equipment[Index] = UNovaAssetDescription::LoadAsset<UNovaEquipmentDescription>(
+					Compartment.Equipments[Index] = UNovaAssetDescription::LoadAsset<UNovaEquipmentDescription>(
 						CompartmentJsonData, FString("E") + FString::FromInt(Index));
 				}
 
@@ -818,7 +817,7 @@ void FNovaSpacecraft::UpdatePropulsionMetrics()
 		PropulsionMetrics.EngineThrust += Metrics.Thrust;
 		TotalEngineISPTimesThrust += Metrics.TotalEngineISPTimesThrust;
 
-		for (const UNovaEquipmentDescription* Equipment : Compartments[CompartmentIndex].Equipment)
+		for (const UNovaEquipmentDescription* Equipment : Compartments[CompartmentIndex].Equipments)
 		{
 			const UNovaThrusterDescription* Thruster = Cast<UNovaThrusterDescription>(Equipment);
 			if (Thruster)
@@ -834,7 +833,7 @@ void FNovaSpacecraft::UpdatePropulsionMetrics()
 	if (PropulsionMetrics.EngineThrust > 0)
 	{
 		PropulsionMetrics.SpecificImpulse = TotalEngineISPTimesThrust / PropulsionMetrics.EngineThrust;
-		PropulsionMetrics.ExhaustVelocity = ENovaConstants::StandardGravity * PropulsionMetrics.SpecificImpulse;
+		PropulsionMetrics.ExhaustVelocity = StandardGravity * PropulsionMetrics.SpecificImpulse;
 		PropulsionMetrics.PropellantRate  = PropulsionMetrics.EngineThrust / PropulsionMetrics.ExhaustVelocity;
 		PropulsionMetrics.MaximumDeltaV =
 			PropulsionMetrics.ExhaustVelocity * log((PropulsionMetrics.MaximumMass) / PropulsionMetrics.DryMass);
@@ -974,7 +973,7 @@ TArray<const class UNovaModuleDescription*> FNovaSpacecraft::GetCompatibleModule
 	return ModuleDescriptions;
 }
 
-TArray<const UNovaEquipmentDescription*> FNovaSpacecraft::GetCompatibleEquipment(int32 CompartmentIndex, int32 SlotIndex) const
+TArray<const UNovaEquipmentDescription*> FNovaSpacecraft::GetCompatibleEquipments(int32 CompartmentIndex, int32 SlotIndex) const
 {
 	TArray<const UNovaEquipmentDescription*> EquipmentDescriptions;
 	TArray<const UNovaEquipmentDescription*> AllEquipmentDescriptions = UNovaAssetManager::Get()->GetAssets<UNovaEquipmentDescription>();
@@ -988,7 +987,7 @@ TArray<const UNovaEquipmentDescription*> FNovaSpacecraft::GetCompatibleEquipment
 			const TArray<ENovaEquipmentType>& SupportedTypes = Compartment.Description->EquipmentSlots[SlotIndex].SupportedTypes;
 			if (SupportedTypes.Num() == 0 || SupportedTypes.Contains(EquipmentDescription->EquipmentType))
 			{
-				if (EquipmentDescription->EquipmentType == ENovaEquipmentType::Aft && !IsLastCompartment(CompartmentIndex))
+				if (EquipmentDescription->EquipmentType == ENovaEquipmentType::Engine && !IsLastCompartment(CompartmentIndex))
 				{
 					continue;
 				}

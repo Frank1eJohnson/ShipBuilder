@@ -66,14 +66,11 @@ ANovaCaptureActor::ANovaCaptureActor()
 	CameraCapture->bCaptureOnMovement  = false;
 	CameraCapture->ShowFlags.EnableAdvancedFeatures();
 	CameraCapture->ShowFlags.SetFog(false);
-	CameraCapture->ShowFlags.SetGame(false);
-	CameraCapture->ShowFlags.SetGrid(false);
 	CameraCapture->FOVAngle                     = 70;
 	CameraCapture->bAlwaysPersistRenderingState = true;
 	CameraCapture->bUseRayTracingIfEnabled      = true;
 
 	// Settings
-	bIsEditorOnlyActor = true;
 	SetActorTickEnabled(true);
 	PrimaryActorTick.bCanEverTick          = true;
 	PrimaryActorTick.bStartWithTickEnabled = true;
@@ -97,51 +94,21 @@ void ANovaCaptureActor::RenderAsset(UNovaAssetDescription* Asset, FSlateBrush& A
 
 	if (AssetToShoot == nullptr)
 	{
-		NLOG("ANovaCaptureActor::RenderAsset for '%s'", *Asset->GetName());
+		NLOG("ANovaCaptureActor::CaptureScreenshot for '%s'", *GetName());
 
 		// Copy state
 		AssetToShoot         = Asset;
 		TargetAssetRender    = &AssetRender;
-		TimeBeforeScreenshot = 0.1f;
+		TimeBeforeScreenshot = 0.5f;
 
 		// Get required objects
 		CreateAssetManager();
 		CreateRenderTarget();
 
-		// Create the actor and scene
+		// Create the actor
 		const FNovaAssetPreviewSettings& Settings = AssetToShoot->GetPreviewSettings();
 		CreateActor(Settings.Class);
 		AssetToShoot->ConfigurePreviewActor(PreviewActor);
-		ConfigureScene(Settings);
-		IStreamingManager::Get().GetRenderAssetStreamingManager().BlockTillAllRequestsFinished();
-
-		// Force all actor textures at maximum resolution
-		PreviewActor->ForEachComponent<UPrimitiveComponent>(false,
-			[=](UPrimitiveComponent* MeshComponent)
-			{
-				NLOG("ANovaCaptureActor::RenderAsset : actor has component '%s'",
-					MeshComponent ? *MeshComponent->GetName() : TEXT("nullptr"));
-
-				if (IsValid(MeshComponent) && IsValid(MeshComponent->GetMaterial(0)))
-				{
-					UMaterialInterface* Material = MeshComponent->GetMaterial(0);
-					NLOG("ANovaCaptureActor::RenderAsset : component has material '%s'", *Material->GetName());
-
-					TArray<UTexture*> Textures;
-					Material->GetUsedTextures(Textures, EMaterialQualityLevel::Num, false, ERHIFeatureLevel::Num, true);
-
-					for (UTexture* Texture : Textures)
-					{
-						Texture->SetForceMipLevelsToBeResident(30.0f);
-						if (Texture->IsA<UTexture2D>())
-						{
-							Texture->StreamIn(Cast<UTexture2D>(Texture)->GetNumMips(), true);
-						}
-						Texture->WaitForStreaming();
-					}
-				}
-			});
-		IStreamingManager::Get().GetRenderAssetStreamingManager().BlockTillAllRequestsFinished();
 	}
 
 #endif    // WITH_EDITOR
@@ -158,9 +125,7 @@ void ANovaCaptureActor::Tick(float DeltaTime)
 	if (AssetToShoot && TimeBeforeScreenshot <= 0.0f)
 	{
 		NLOG("ANovaCaptureActor::Tick : proceeding with screenshot for '%s'", *GetName());
-
-		// Proceed with the screenshot
-		CameraCapture->CaptureScene();
+		const FNovaAssetPreviewSettings& Settings = AssetToShoot->GetPreviewSettings();
 
 		// Delete previous content
 		if (TargetAssetRender->GetResourceObject())
@@ -178,7 +143,9 @@ void ANovaCaptureActor::Tick(float DeltaTime)
 			ScreenshotPath.InsertAt(SeparatorIndex + 1, TEXT("T_"));
 		}
 
-		// Save the asset
+		// Proceed with the screenshot
+		ConfigureScene(Settings);
+		CameraCapture->CaptureScene();
 		UTexture2D* AssetRenderTexture = SaveTexture(ScreenshotPath);
 		TargetAssetRender->SetResourceObject(AssetRenderTexture);
 		TargetAssetRender->SetImageSize(GetDesiredSize());
@@ -195,7 +162,6 @@ void ANovaCaptureActor::CreateActor(TSubclassOf<AActor> ActorClass)
 	PreviewActor = Cast<AActor>(GetWorld()->SpawnActor(ActorClass));
 	NCHECK(PreviewActor);
 
-	PreviewActor->GetRootComponent()->SetMobility(EComponentMobility::Movable);
 	PreviewActor->AttachToComponent(RootComponent, FAttachmentTransformRules(EAttachmentRule::SnapToTarget, false));
 }
 

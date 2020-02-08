@@ -9,11 +9,10 @@
 class SNovaTradableAssetItem : public SCompoundWidget
 {
 	SLATE_BEGIN_ARGS(SNovaTradableAssetItem)
-		: _Asset(nullptr), _DefaultAsset(nullptr), _GameState(nullptr), _NoPriceHint(false), _Dark(false), _SelectionIcon(nullptr)
+		: _Asset(nullptr), _GameState(nullptr), _NoPriceHint(false), _Dark(false), _SelectionIcon(nullptr)
 	{}
 
 	SLATE_ARGUMENT(const UNovaTradableAssetDescription*, Asset)
-	SLATE_ARGUMENT(const UNovaTradableAssetDescription*, DefaultAsset)
 	SLATE_ARGUMENT(const ANovaGameState*, GameState)
 	SLATE_ARGUMENT(bool, NoPriceHint)
 	SLATE_ARGUMENT(bool, Dark)
@@ -27,9 +26,8 @@ public:
 
 	void Construct(const FArguments& InArgs)
 	{
-		Asset        = InArgs._Asset;
-		DefaultAsset = InArgs._DefaultAsset;
-		GameState    = InArgs._GameState;
+		Asset     = InArgs._Asset;
+		GameState = InArgs._GameState;
 
 		const FNovaMainTheme&      Theme       = FNovaStyleSet::GetMainTheme();
 		const FNovaButtonTheme&    ButtonTheme = FNovaStyleSet::GetButtonTheme();
@@ -163,10 +161,6 @@ protected:
 		{
 			return &Asset->AssetRender;
 		}
-		else if (DefaultAsset.IsValid())
-		{
-			return &DefaultAsset->AssetRender;
-		}
 
 		return nullptr;
 	}
@@ -176,10 +170,6 @@ protected:
 		if (Asset.IsValid())
 		{
 			return Asset->Name;
-		}
-		else if (DefaultAsset.IsValid())
-		{
-			return DefaultAsset->Name;
 		}
 
 		return FText();
@@ -197,18 +187,10 @@ protected:
 
 	FText GetPriceText() const
 	{
-		if (GameState.IsValid())
+		if (Asset.IsValid() && GameState.IsValid())
 		{
-			if (Asset.IsValid())
-			{
-				FNovaCredits Price = GameState->GetCurrentPrice(Asset.Get());
-				return ::GetPriceText(Price);
-			}
-			else if (DefaultAsset.IsValid())
-			{
-				FNovaCredits Price = GameState->GetCurrentPrice(DefaultAsset.Get());
-				return ::GetPriceText(Price);
-			}
+			FNovaCredits Price = GameState->GetCurrentPrice(Asset.Get());
+			return ::GetPriceText(Price);
 		}
 
 		return FText();
@@ -239,6 +221,5 @@ protected:
 protected:
 	// Settings
 	TWeakObjectPtr<const UNovaTradableAssetDescription> Asset;
-	TWeakObjectPtr<const UNovaTradableAssetDescription> DefaultAsset;
 	TWeakObjectPtr<const ANovaGameState>                GameState;
 };
