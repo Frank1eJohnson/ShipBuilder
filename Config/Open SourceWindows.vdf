@@ -1,9 +1,9 @@
 "AppBuild"
 {
 	"AppID" "1728180"
-	"Desc" "UE5 - Windows"
+	"Desc" "Master - Windows"
 
-	"ContentRoot" "..\Packaged\Windows"
+	"ContentRoot" "..\Packaged\WindowsNoEditor"
 	"BuildOutput" "..\Steam"
 
 	"Depots"

@@ -243,16 +243,25 @@ protected:
 	bool  IsAddCompartmentEnabled() const;
 	bool  IsEditCompartmentEnabled() const;
 	FText GetCompartmentText();
-
-	// Compartment callbacks
 	bool  IsBackToAssemblyEnabled() const;
+
+	// Module callbacks
 	FText GetModuleHelpText(int32 ModuleIndex) const;
 	bool  IsModuleEnabled(int32 ModuleIndex) const
 	{
 		return IsModuleEnabled(ModuleIndex, nullptr);
 	}
-	bool  IsModuleEnabled(int32 ModuleIndex, FText* Help) const;
-	bool  IsEquipmentEnabled(int32 EquipmentIndex) const;
+	bool IsModuleEnabled(int32 ModuleIndex, FText* Help) const;
+
+	// Equipment callbacks
+	FText GetEquipmentHelpText(int32 EquipmentIndex) const;
+	bool  IsEquipmentEnabled(int32 EquipmentIndex) const
+	{
+		return IsEquipmentEnabled(EquipmentIndex, nullptr);
+	}
+	bool IsEquipmentEnabled(int32 EquipmentIndex, FText* Help) const;
+
+	// Module + equipment
 	FText GetModuleOrEquipmentText();
 
 	// Key bindings
@@ -284,7 +293,7 @@ protected:
 	void OnEnterPhotoMode(FName ActionName);
 	void OnSelectedFilterChanged(float Value);
 
-	// Modules & equipments
+	// Modules & equipment
 	void OnSelectedModuleChanged(const class UNovaModuleDescription* Module, int32 Index);
 	void OnSelectedEquipmentChanged(const class UNovaEquipmentDescription* Equipment, int32 Index);
 	void OnSelectedHullTypeChanged(const class UNovaHullDescription* Hull, int32 Index);
