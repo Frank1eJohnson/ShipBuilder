@@ -27,9 +27,10 @@ public class ShipBuilder : ModuleRules
             "RHI",
             "RenderCore",
 
-            "Http",
+            "HTTP",
             "OnlineSubsystem",
-            "OnlineSubsystemUtils"
+            "OnlineSubsystemUtils",
+            "NetCore"
         });
 
         if (Target.Type == TargetType.Editor)
@@ -42,7 +43,7 @@ public class ShipBuilder : ModuleRules
         if (Target.Platform.IsInGroup(UnrealPlatformGroup.Windows))
         {
             PrivateDependencyModuleNames.AddRange(new string[] {
-                "DLSS"
+                //"DLSS"
             });
         }
 
