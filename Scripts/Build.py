@@ -60,12 +60,12 @@ if outputDir == 'None':
 if engineDir != 'None':
 	if not os.path.exists(engineDir):
 		sys.exit('Engine directory provided in project.json does not exist')
-if 'UE_ROOT' in os.environ:
-	engineDir = os.environ['UE_ROOT']
+if 'UE4_ROOT' in os.environ:
+	engineDir = os.environ['UE4_ROOT']
 	if not os.path.exists(engineDir):
-		sys.exit('Engine directory provided in %UE_ROOT% does not exist')
+		sys.exit('Engine directory provided in %UE4_ROOT% does not exist')
 else:
-	sys.exit('Engine directory was set neither in project.json nor UE_ROOT environment variable')
+	sys.exit('Engine directory was set neither in project.json nor UE4_ROOT environment variable')
 
 # Installed vs built engine
 if sourceEngine:
@@ -92,41 +92,32 @@ if os.path.exists(releaseOutputDir):
 # Execute build command for each platform
 for platform in projectPlatforms:
 
-	cleanPlatformNames = {
-		'Win64' : 'Windows',
-		'Linux' : 'Linux'
-	}
-	
-	# Clean up output path
-	buildOutputDir = os.path.join(outputDir, cleanPlatformNames[platform])
+	# Get platform path
+	if platform == 'Linux':
+		buildOutputDir = outputDir + "/LinuxNoEditor"
+	else:
+		buildOutputDir = outputDir + "/WindowsNoEditor"
+
+	# Clean up
 	if os.path.exists(buildOutputDir):
 		shutil.rmtree(buildOutputDir)
 
 	# Build project
 	subprocess.check_call([
 
-		engineBuildTool,
-		
-		# SDK
-		'-ScriptsForProject="' + projectFile + '"',
-		'Turnkey',
-		'-command=VerifySdk',
-		'-platform=' + platform,
-		'-UpdateIfNeeded',
-		
 		# Executable
+		engineBuildTool,
 		'BuildCookRun',
-		'-unrealexe=UnrealEditor-Cmd.exe',
+		'-ue4exe=UE4Editor-Cmd.exe',
 
 		# Project
 		'-project="' + projectFile + '"',
-		'-utf8output', '-nop4',
+		'-utf8output', '-nop4', 
 
 		# Build
 		'-nocompile',
 		'-clientconfig=' + projectBuildConfiguration,
-		'-build',
-		'-targetplatform=' + platform,
+		'-build', '-targetplatform=' + platform,
 		cleanOption,
 		installedOption,
 
@@ -141,16 +132,15 @@ for platform in projectPlatforms:
 		'-pak',
 		'-compressed',
 		'-distribution',
-		'-archive',
-		'-archivedirectory="' + outputDir + '"'
+		'-archive', '-archivedirectory="' + outputDir + '"'
 	])
-
-	# Remove individual files that are not wanted in release
+			
+	# Post-processing of generated files
 	for root, directories, filenames in os.walk(buildOutputDir):
 		for filename in filenames:
 			
 			absoluteFilename = str(os.path.join(root, filename))
-			baseChunkName = projectName + '-' + cleanPlatformNames[platform] + '-'
+			baseChunkName = projectName + '-' + platform + '-'
 		
 			# Wipe generated files that aren't needed
 			if re.match('.*\.((pdb)|(debug))', filename):
@@ -163,22 +153,19 @@ for platform in projectPlatforms:
 			chunkMatch = re.search('pakchunk([0-9]+)optional.*\.pak', filename)
 			if chunkMatch:
 				absoluteChunkFilename = str(os.path.join(root, baseChunkName + chunkMatch.group(1) + 'b.pak'))
-				shutil.move(absoluteFilename, absoluteChunkFilename)
+				os.rename(absoluteFilename, absoluteChunkFilename)
 	
 			# Rename normal chunks
 			else:
 				chunkMatch = re.search('pakchunk([0-9]+).*\.pak', filename)
 				if chunkMatch:
 					absoluteChunkFilename = str(os.path.join(root, baseChunkName + chunkMatch.group(1) + '.pak'))
-					shutil.move(absoluteFilename, absoluteChunkFilename)
+					os.rename(absoluteFilename, absoluteChunkFilename)
 	
-	# Remove unwanted config directories, engine debug content, unused libraries
-	shutil.rmtree(os.path.join(buildOutputDir, projectName, 'Config'), ignore_errors=True)
-	shutil.rmtree(os.path.join(buildOutputDir, 'Engine', 'Content'), ignore_errors=True)
-	shutil.rmtree(os.path.join(buildOutputDir, 'Engine', 'Binaries', 'ThirdParty', 'NVIDIA'), ignore_errors=True)
-	shutil.rmtree(os.path.join(buildOutputDir, 'Engine', 'Binaries', 'ThirdParty', 'PhysX3'), ignore_errors=True)
+	# Remove engine content - only debug stuff
+	shutil.rmtree(os.path.join(buildOutputDir, 'Engine', 'Content'))
 	
-	# Copy Open Source appId file
+	# Copy Open Source Appid file
 	buildExecutableDir = os.path.join(buildOutputDir, projectName, 'Binaries', platform)
 	shutil.copyfile(os.path.join('..', 'open source_appid.txt'), os.path.join(buildExecutableDir, 'open source_appid.txt'))
 	

@@ -1,5 +1,5 @@
 {
-	"name": "ShipBuilder",
+	"name": "Nova",
 	"platforms": ["Win64", "Linux"],
 	"configuration": "Shipping",
 	"pdb": false,
@@ -9,7 +9,7 @@
 	{
 		"project": "nova",
 		"branches": ["windows", "linux"],
-		"directories": ["Windows", "Linux"]
+		"directories": ["WindowsNoEditor", "LinuxNoEditor"]
 	},
 	
 	"open source":
