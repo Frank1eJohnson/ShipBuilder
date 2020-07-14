@@ -54,8 +54,10 @@ void SNovaTabPanel::OnFocusChanged(TSharedPtr<class SNovaButton> FocusButton)
 	}
 }
 
-void SNovaTabPanel::Initialize(int32 Index, bool IsBlurred, SNovaTabView* Parent)
+void SNovaTabPanel::Initialize(int32 Index, bool IsBlurred, TSharedPtr<SNovaTabView> Parent)
 {
+	NCHECK(Parent.IsValid());
+
 	Blurred       = IsBlurred;
 	TabIndex      = Index;
 	ParentTabView = Parent;
@@ -107,6 +109,12 @@ SNovaTabView::SNovaTabView() : DesiredTabIndex(0), CurrentTabIndex(0), CurrentBl
 
 void SNovaTabView::Construct(const FArguments& InArgs)
 {
+	// Copy the slots
+	for (const FSlot::FSlotArguments& Arg : InArgs._Slots)
+	{
+		Slots.Add(Arg.GetSlot());
+	}
+
 	// Data
 	const FNovaMainTheme&   Theme       = FNovaStyleSet::GetMainTheme();
 	const FNovaButtonTheme& ButtonTheme = FNovaStyleSet::GetButtonTheme();
@@ -237,8 +245,10 @@ void SNovaTabView::Construct(const FArguments& InArgs)
 
 	// Slot contents
 	int32 Index = 0;
-	for (FSlot::FSlotArguments& Arg : const_cast<TArray<FSlot::FSlotArguments>&>(InArgs._Slots))
+	for (const FSlot::FSlotArguments& Arg : InArgs._Slots)
 	{
+		const FSlot* Slot = Arg.GetSlot();
+
 		// Add header entry
 		Header->AddSlot()
 		.AutoWidth()
@@ -246,25 +256,23 @@ void SNovaTabView::Construct(const FArguments& InArgs)
 			SNew(SNovaButton) // No navigation
 			.Theme("TabButton")
 			.Size("TabButtonSize")
-			.Text(Arg._Header)
-			.HelpText(Arg._HeaderHelp)
+			.Text(Slot->HeaderAttr)
+			.HelpText(Slot->HeaderHelpAttr)
 			.OnClicked(this, &SNovaTabView::SetTabIndex, Index)
 			.Visibility(this, &SNovaTabView::GetTabVisibility, Index)
 			.Enabled(this, &SNovaTabView::IsTabEnabled, Index)
 			.Focusable(false)
 		];
 		
-
 		// Add content
 		SNovaTabPanel* TabPanel = static_cast<SNovaTabPanel*>(Arg.GetAttachedWidget().Get());
-		TabPanel->Initialize(Index, Arg._Blur.Get(), this);
+		TabPanel->Initialize(Index, Slot->BlurredAttr.Get(), MakeShareable(this));
 		Content->AddSlot()
 		[
 			Arg.GetAttachedWidget().ToSharedRef()
 		];
 
 		Panels.Add(TabPanel);
-		PanelVisibility.Add(Arg._Visible);
 
 		Index++;
 	}
@@ -284,10 +292,10 @@ void SNovaTabView::Tick(const FGeometry& AllottedGeometry, const double CurrentT
 	// If we lost the current tab, find another one
 	if (!IsTabVisible(CurrentTabIndex) && !IsTabVisible(DesiredTabIndex))
 	{
-		for (int32 Index = 0; Index < Panels.Num(); Index++)
+		for (int32 Index = 0; Index < Slots.Num(); Index++)
 		{
 			int32 RelativeIndex = (Index / 2 + 1) * (Index % 2 != 0 ? 1 : -1);
-			RelativeIndex       = CurrentTabIndex + (RelativeIndex % Panels.Num());
+			RelativeIndex       = CurrentTabIndex + (RelativeIndex % Slots.Num());
 
 			if (RelativeIndex >= 0 && IsTabVisible(RelativeIndex))
 			{
@@ -326,7 +334,7 @@ void SNovaTabView::ShowPreviousTab()
 
 void SNovaTabView::ShowNextTab()
 {
-	for (int32 Index = CurrentTabIndex + 1; Index < Panels.Num(); Index++)
+	for (int32 Index = CurrentTabIndex + 1; Index < Slots.Num(); Index++)
 	{
 		if (IsTabVisible(Index))
 		{
@@ -340,7 +348,7 @@ void SNovaTabView::SetTabIndex(int32 Index)
 {
 	NLOG("SNovaTabView::SetTabIndex : %d, was %d", Index, CurrentTabIndex);
 
-	if (Index >= 0 && Index < Panels.Num() && Index != CurrentTabIndex)
+	if (Index >= 0 && Index < Slots.Num() && Index != CurrentTabIndex)
 	{
 		DesiredTabIndex = Index;
 	}
@@ -363,14 +371,7 @@ float SNovaTabView::GetCurrentTabAlpha() const
 
 bool SNovaTabView::IsTabVisible(int32 Index) const
 {
-	NCHECK(Index >= 0 && Index < PanelVisibility.Num());
-
-	if (PanelVisibility[Index].IsBound() || PanelVisibility[Index].IsSet())
-	{
-		return PanelVisibility[Index].Get();
-	}
-
-	return true;
+	return (!Slots[Index]->VisibleAttr.IsBound() || Slots[Index]->VisibleAttr.Get());
 }
 
 TSharedRef<SNovaTabPanel> SNovaTabView::GetCurrentTabContent() const
@@ -384,7 +385,12 @@ TSharedRef<SNovaTabPanel> SNovaTabView::GetCurrentTabContent() const
 
 EVisibility SNovaTabView::GetTabVisibility(int32 Index) const
 {
-	return IsTabVisible(Index) ? EVisibility::Visible : EVisibility::Collapsed;
+	if (Slots[Index]->VisibleAttr.IsBound())
+	{
+		return Slots[Index]->VisibleAttr.Get() ? EVisibility::Visible : EVisibility::Collapsed;
+	}
+
+	return EVisibility::Visible;
 }
 
 bool SNovaTabView::IsTabEnabled(int32 Index) const

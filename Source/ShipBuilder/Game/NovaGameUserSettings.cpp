@@ -6,11 +6,9 @@
 #include "Modules/ModuleManager.h"
 #include "RenderCore.h"
 
-#define HAS_DLSS PLATFORM_WINDOWS && 0
-
-#if HAS_DLSS
+#if PLATFORM_WINDOWS
 #include "DLSS.h"
-#endif    // HAS_DLSS
+#endif    // PLATFORM_WINDOWS
 
 /*----------------------------------------------------
     Constructor
@@ -25,21 +23,12 @@ UNovaGameUserSettings::UNovaGameUserSettings()
 
 void UNovaGameUserSettings::ApplyCustomGraphicsSettings()
 {
-#if HAS_DLSS
 	// Toggle DLSS
 	EnableDLSS                = EnableDLSS && IsDLSSSupported();
 	IConsoleVariable* DLSSVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.NGX.DLSS.Enable"));
 	if (DLSSVar)
 	{
 		DLSSVar->Set(EnableDLSS ? 1 : 0, ECVF_SetByConsole);
-	}
-#endif    // HAS_DLSS
-
-	// Set screen percentage
-	IConsoleVariable* ScreenPercentageVar = IConsoleManager::Get().FindConsoleVariable(TEXT("r.ScreenPercentage"));
-	if (ScreenPercentageVar)
-	{
-		ScreenPercentageVar->Set(ScreenPercentage, ECVF_SetByConsole);
 	}
 }
 
@@ -50,13 +39,13 @@ bool UNovaGameUserSettings::IsHDRSupported() const
 
 bool UNovaGameUserSettings::IsDLSSSupported() const
 {
-#if HAS_DLSS
+#if PLATFORM_WINDOWS
 	IDLSSModuleInterface* DLSSModule = &FModuleManager::LoadModuleChecked<IDLSSModuleInterface>(TEXT("DLSS"));
 	if (DLSSModule)
 	{
 		return DLSSModule->QueryDLSSSupport() == EDLSSSupport::Supported;
 	}
-#endif    // HAS_DLSS
+#endif    // PLATFORM_WINDOWS
 
 	return false;
 }
