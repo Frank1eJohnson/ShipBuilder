@@ -1,5 +1,5 @@
 {
-	"name": "Nova",
+	"name": "ShipBuilder",
 	"platforms": ["Win64", "Linux"],
 	"configuration": "Shipping",
 	"pdb": false,

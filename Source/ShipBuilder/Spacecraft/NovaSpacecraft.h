@@ -264,16 +264,14 @@ struct FNovaSpacecraftPropulsionMetrics
 	/** Get the remaining delta-v in m/s */
 	float GetRemainingDeltaV(float CurrentCargoMass, float CurrentPropellantMass) const
 	{
-		if (DryMass > 0 && ExhaustVelocity > 0)
-		{
-			const float CurrentTotalMass = DryMass + CurrentCargoMass + CurrentPropellantMass;
+		return (DryMass > 0 && ExhaustVelocity > 0) ? ExhaustVelocity * log((DryMass + CurrentCargoMass + CurrentPropellantMass) / DryMass)
+													: 0.0f;
+	}
 
-			return ExhaustVelocity * log(CurrentTotalMass / DryMass);
-		}
-		else
-		{
-			return 0.0f;
-		}
+	/** Get the minimum amount of fuel required for a delta-v budget */
+	float GetRequiredPropellant(float DeltaV, float CurrentCargoMass) const
+	{
+		return (DryMass > 0 && ExhaustVelocity > 0) ? DryMass * exp(DeltaV / ExhaustVelocity) - DryMass - CurrentCargoMass : 0.0f;
 	}
 
 	// Dry mass before propellants and cargo in T

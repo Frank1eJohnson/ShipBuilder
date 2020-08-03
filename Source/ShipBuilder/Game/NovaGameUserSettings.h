@@ -56,10 +56,6 @@ public:
 	UPROPERTY(Config, BlueprintReadOnly, VisibleAnywhere)
 	bool EnableDLSS;
 
-	/** Enable Lumen */
-	UPROPERTY(Config, BlueprintReadOnly, VisibleAnywhere)
-	bool EnableLumen;
-
 	/** Enable DXR shadows */
 	UPROPERTY(Config, BlueprintReadOnly, VisibleAnywhere)
 	bool EnableRaytracedShadows;

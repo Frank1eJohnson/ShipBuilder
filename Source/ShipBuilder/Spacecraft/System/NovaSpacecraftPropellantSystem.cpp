@@ -13,9 +13,8 @@
 UNovaSpacecraftPropellantSystem::UNovaSpacecraftPropellantSystem()
 	: Super()
 
-	, InitialPropellantMass(0)
-	, PropellantMass(0)
 	, PropellantRate(0)
+	, PropellantMass(0)
 {
 	SetIsReplicatedByDefault(true);
 }
@@ -35,31 +34,35 @@ void UNovaSpacecraftPropellantSystem::Update(FNovaTime InitialTime, FNovaTime Fi
 	// Process usage between start and end time
 	if (Simulation && PropulsionMetrics)
 	{
+		const FNovaTrajectory* Trajectory         = Simulation->GetSpacecraftTrajectory(Identifier);
+		const float            FullPropellantRate = PropulsionMetrics->PropellantRate;
+		FNovaTime              CurrentTime        = InitialTime;
+
 		PropellantRate = 0;
 
-		const FNovaTrajectory* Trajectory = Simulation->GetSpacecraftTrajectory(Identifier);
 		if (Trajectory)
 		{
-			PropellantMass = InitialPropellantMass;
-
 			for (const FNovaManeuver& Maneuver : Trajectory->Maneuvers)
 			{
-				FNovaTime ManeuverEndTime          = FMath::Min(Maneuver.Time + Maneuver.Duration, FinalTime);
-				FNovaTime AdjustedManeuverDuration = ManeuverEndTime - Maneuver.Time;
-				double    DeltaTimeSeconds         = AdjustedManeuverDuration.AsSeconds();
+				FNovaTime ManeuverEndTime = FMath::Min(Maneuver.Time + Maneuver.Duration, FinalTime);
 
-				if (DeltaTimeSeconds > 0)
+				if (CurrentTime >= Maneuver.Time && CurrentTime <= ManeuverEndTime)
 				{
 					int32 SpacecraftIndex = Simulation->GetSpacecraftTrajectoryIndex(Identifier);
 					NCHECK(SpacecraftIndex != INDEX_NONE && SpacecraftIndex >= 0 && SpacecraftIndex < Maneuver.ThrustFactors.Num());
+					PropellantRate = FullPropellantRate * Maneuver.ThrustFactors[SpacecraftIndex];
 
-					PropellantRate = PropulsionMetrics->PropellantRate * Maneuver.ThrustFactors[SpacecraftIndex];
+					double DeltaTimeSeconds = (ManeuverEndTime - CurrentTime).AsMinutes() * 60;
+
 					PropellantMass -= PropellantRate * DeltaTimeSeconds;
+
+#if 0
+					NLOG("Rate %f, dt %f, current consumed %f", CurrentRate, DeltaTimeSeconds, ConsumedAmount);
+#endif
+
+					CurrentTime = ManeuverEndTime;
 				}
 			}
-#if 0
-			NLOG("PropellantRate %f, InitialPropellantMass %f, PropellantMass %f", PropellantRate, InitialPropellantMass, PropellantMass);
-#endif
 		}
 
 		NCHECK(PropellantMass >= 0);

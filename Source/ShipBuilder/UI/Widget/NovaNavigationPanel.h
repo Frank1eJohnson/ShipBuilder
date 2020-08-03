@@ -31,11 +31,10 @@ class SNovaNavigationPanel : public SCompoundWidget
 public:
 	/** Create a new focusable button */
 	template <typename WidgetType, typename RequiredArgsPayloadType>
-	TSlateDecl<WidgetType, RequiredArgsPayloadType> NewNovaButton(
+	TDecl<WidgetType, RequiredArgsPayloadType> NewNovaButton(
 		const ANSICHAR* InType, const ANSICHAR* InFile, int32 OnLine, RequiredArgsPayloadType&& InRequiredArgs, bool DefaultFocus)
 	{
-		auto Button =
-			TSlateDecl<WidgetType, RequiredArgsPayloadType>(InType, InFile, OnLine, Forward<RequiredArgsPayloadType>(InRequiredArgs));
+		auto Button = TDecl<WidgetType, RequiredArgsPayloadType>(InType, InFile, OnLine, Forward<RequiredArgsPayloadType>(InRequiredArgs));
 
 		if ((NavigationButtons.Num() == 0 && Button._Widget->IsEnabled()) || DefaultFocus)
 		{
