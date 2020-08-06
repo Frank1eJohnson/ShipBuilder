@@ -101,7 +101,7 @@ void SNovaMainMenu::Construct(const FArguments& InArgs)
 				+ SHorizontalBox::Slot()
 				.HAlign(HAlign_Left)
 				[
-					SAssignNew(Tooltip, SNovaText)
+					SAssignNew(Tooltip, SNovaRichText)
 					.TextStyle(&Theme.MainFont)
 					.Text(FNovaTextGetter::CreateSP(this, &SNovaMainMenu::GetTooltipText))
 				]
@@ -138,8 +138,7 @@ void SNovaMainMenu::Construct(const FArguments& InArgs)
 		+ SNovaTabView::Slot()
 		.Header(LOCTEXT("HomeMenuTitle", "Home"))
 		.HeaderHelp(LOCTEXT("MainMenuTitleHelp", "Start playing"))
-		.Visible(TAttribute<bool>::FGetter::CreateSP(this, &SNovaMainMenu::IsHomeMenuVisible))
-		.Blur()
+		.Visible(this, &SNovaMainMenu::IsHomeMenuVisible)
 		[
 			SAssignNew(HomeMenu, SNovaMainMenuHome)
 			.Menu(this)
@@ -150,9 +149,9 @@ void SNovaMainMenu::Construct(const FArguments& InArgs)
 		+ SNovaTabView::Slot()
 		.Header(LOCTEXT("GameMenuTitle", "Game"))
 		.HeaderHelp(LOCTEXT("GameMenuTitleHelp", "Play with your friends"))
-		//.Visible(TAttribute<bool>::FGetter::CreateSP(this, &SNovaMainMenu::AreGameMenusVisible))
-		.Visible(TAttribute<bool>::FGetter::CreateLambda([](){return false;}))
-		.Blur()
+		//.Visible(this, &SNovaMainMenu::AreGameMenusVisible)
+		.Visible(false)
+		.Blur(true)
 		[
 			SAssignNew(GameMenu, SNovaMainMenuGame)
 			.Menu(this)
@@ -163,7 +162,8 @@ void SNovaMainMenu::Construct(const FArguments& InArgs)
 		+ SNovaTabView::Slot()
 		.Header(LOCTEXT("FlightMenuTitle", "Flight"))
 		.HeaderHelp(LOCTEXT("FlightMenuTitleHelp", "Control your ship"))
-		.Visible(TAttribute<bool>::FGetter::CreateSP(this, &SNovaMainMenu::AreGameMenusVisible))
+		.Visible(this, &SNovaMainMenu::AreGameMenusVisible)
+		.Blur(false)
 		[
 			SAssignNew(FlightMenu, SNovaMainMenuFlight)
 			.Menu(this)
@@ -174,8 +174,8 @@ void SNovaMainMenu::Construct(const FArguments& InArgs)
 		+ SNovaTabView::Slot()
 		.Header(LOCTEXT("NavigationMenuTitle", "Navigation"))
 		.HeaderHelp(LOCTEXT("NavigationMenuTitleHelp", "Plot trajectories"))
-		.Visible(TAttribute<bool>::FGetter::CreateSP(this, &SNovaMainMenu::AreGameMenusVisible))
-		.Blur()
+		.Visible(this, &SNovaMainMenu::AreGameMenusVisible)
+		.Blur(true)
 		[
 			SAssignNew(NavigationMenu, SNovaMainMenuNavigation)
 			.Menu(this)
@@ -185,9 +185,9 @@ void SNovaMainMenu::Construct(const FArguments& InArgs)
 		// Inventory menu
 		+ SNovaTabView::Slot()
 		.Header(LOCTEXT("InventoryMenuTitle", "Inventory"))
-		.HeaderHelp(LOCTEXT("InventoryMenuTitleHelp", "Manage your spacecraft's fuel and cargo"))
-		.Visible(TAttribute<bool>::FGetter::CreateSP(this, &SNovaMainMenu::AreGameMenusVisible))
-		.Blur()
+		.HeaderHelp(LOCTEXT("InventoryMenuTitleHelp", "Manage your spacecraft's propellant and cargo"))
+		.Blur(true)
+		.Visible(this, &SNovaMainMenu::AreGameMenusVisible)
 		[
 			SAssignNew(InventoryMenu, SNovaMainMenuInventory)
 			.Menu(this)
@@ -198,7 +198,8 @@ void SNovaMainMenu::Construct(const FArguments& InArgs)
 		+ SNovaTabView::Slot()
 		.Header(LOCTEXT("AssemblyMenuTitle", "Assembly"))
 		.HeaderHelp(LOCTEXT("AssemblyMenuTitleHelp", "Edit spacecraft assembly"))
-		.Visible(TAttribute<bool>::FGetter::CreateSP(this, &SNovaMainMenu::IsAssemblyMenuVisible))
+		.Visible(this, &SNovaMainMenu::IsAssemblyMenuVisible)
+		.Blur(false)
 		[
 			SAssignNew(AssemblyMenu, SNovaMainMenuAssembly)
 			.Menu(this)
@@ -209,7 +210,7 @@ void SNovaMainMenu::Construct(const FArguments& InArgs)
 		+ SNovaTabView::Slot()
 		.Header(LOCTEXT("SettingsMenuTitle", "Settings"))
 		.HeaderHelp(LOCTEXT("SettingsMenuTitleHelp", "Setup the game"))
-		.Blur()
+		.Blur(true)
 		[
 			SAssignNew(SettingsMenu, SNovaMainMenuSettings)
 			.Menu(this)
@@ -393,7 +394,7 @@ FText SNovaMainMenu::GetCloseHelpText() const
 
 FText SNovaMainMenu::GetTooltipText() const
 {
-	return CurrentTooltipText;
+	return FText::FromString(TEXT("<img src=\"/Text/Info\"/> ") + CurrentTooltipText.ToString());
 }
 
 FText SNovaMainMenu::GetDateText() const

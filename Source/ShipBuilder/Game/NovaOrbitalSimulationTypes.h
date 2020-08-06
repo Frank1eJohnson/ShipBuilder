@@ -157,7 +157,7 @@ struct FNovaOrbitGeometry
 	{
 		NCHECK(Body);
 		const double PhaseDelta = (DeltaTime / GetOrbitalPeriod()) * 360;
-		double       Result     = StartPhase + (Unwind ? FMath::Fmod(PhaseDelta, 360.0) : PhaseDelta);
+		double       Result     = StartPhase + (Unwind ? fmod(PhaseDelta, 360.0) : PhaseDelta);
 
 		if (Unwind)
 		{
@@ -425,6 +425,9 @@ struct FNovaTrajectory
 		const FNovaManeuver& FinalManeuver = Maneuvers[Maneuvers.Num() - 1];
 		return FinalManeuver.Time + FinalManeuver.Duration;
 	}
+
+	/** Get how many tons of propellant will be used */
+	float GetTotalPropellantUsed(int32 SpacecraftIndex, const struct FNovaSpacecraftPropulsionMetrics& Metrics);
 
 	/** Get the number of remaining maneuvers */
 	int32 GetRemainingManeuverCount(FNovaTime CurrentTime) const

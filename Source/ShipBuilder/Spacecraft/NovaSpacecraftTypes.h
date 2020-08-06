@@ -14,8 +14,9 @@
 UENUM()
 enum class ENovaEquipmentType : uint8
 {
-	Standard,
-	Aft
+	Standard,       // Equipment that may transit cargo, humans, propellant
+	Unconnected,    // Simplified equipment that only needs a few wires
+	Aft             // Engine equipment
 };
 
 /** Type of bulkhead to use */
@@ -133,6 +134,9 @@ USTRUCT()
 struct FNovaModuleSlot
 {
 	GENERATED_BODY()
+
+	FNovaModuleSlot() : ForceSkirtPiping(false)
+	{}
 
 public:
 	// Slot name in menus
@@ -430,10 +434,6 @@ public:
 	// Whether the module needs tank piping
 	UPROPERTY(Category = Properties, EditDefaultsOnly)
 	bool NeedsPiping = false;
-
-	// Whether the module allow a single connection for a train of identical modules
-	UPROPERTY(Category = Properties, EditDefaultsOnly)
-	bool AllowCommonWiring = false;
 };
 
 /** Description of a propellant module */
