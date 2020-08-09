@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"EngineAssociation": "{4F0B82BC-495D-831C-3FF0-9FBCAB89E6EE}",
+	"EngineAssociation": "4.26",
 	"Category": "",
 	"Description": "",
 	"Modules": [
@@ -317,11 +317,11 @@
 		},
 		{
 			"Name": "GPULightmass",
-			"Enabled": false
+			"Enabled": true
 		},
 		{
 			"Name": "DLSS",
-			"Enabled": false,
+			"Enabled": true,
 			"MarketplaceURL": "https://www.unrealengine.com/marketplace/en-US/product/nvidia-dlss"
 		},
 		{
@@ -404,21 +404,10 @@
 		{
 			"Name": "LevelSequenceEditor",
 			"Enabled": false
-		},
-		{
-			"Name": "Bridge",
-			"Enabled": true,
-			"SupportedTargetPlatforms": [
-				"Win64",
-				"Mac",
-				"Linux"
-			]
 		}
 	],
 	"TargetPlatforms": [
 		"WindowsNoEditor",
-		"LinuxNoEditor",
-		"Windows",
-		"Linux"
+		"LinuxNoEditor"
 	]
 }

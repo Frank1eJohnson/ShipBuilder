@@ -210,7 +210,7 @@ void SNovaButton::Construct(const FArguments& InArgs)
 	// clang-format on
 
 	// Set opacity
-	SetColorAndOpacity(TAttribute<FLinearColor>(this, &SNovaButton::GetMainColor));
+	ColorAndOpacity.BindRaw(this, &SNovaButton::GetMainColor);
 }
 
 /*----------------------------------------------------
@@ -223,7 +223,7 @@ void SNovaButton::Tick(const FGeometry& AllottedGeometry, const double CurrentTi
 
 	const FNovaButtonTheme& Theme = FNovaStyleSet::GetButtonTheme(ThemeName);
 
-	SetIsFocusable(ButtonFocusable.Get());
+	bIsFocusable = ButtonFocusable.Get();
 
 	float TargetColorAnim    = 0;
 	float TargetSizeAnim     = 0;
@@ -244,10 +244,6 @@ void SNovaButton::Tick(const FGeometry& AllottedGeometry, const double CurrentTi
 	}
 	else
 	{
-		if (IsFocused())
-		{
-			TargetSizeAnim = 1.0f;
-		}
 		TargetDisabledAnim = 1.0f;
 	}
 	if (State.CurrentTimeSinceClicked < Theme.AnimationDuration)

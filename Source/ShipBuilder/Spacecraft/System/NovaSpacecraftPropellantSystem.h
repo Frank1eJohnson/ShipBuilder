@@ -28,8 +28,7 @@ public:
 	{
 		NLOG("UNovaSpacecraftPropellantSystem::Load : %f", Spacecraft.PropellantMassAtLaunch);
 
-		PropellantMass        = Spacecraft.PropellantMassAtLaunch;
-		InitialPropellantMass = PropellantMass;
+		PropellantMass = Spacecraft.PropellantMassAtLaunch;
 	}
 
 	virtual void Save(FNovaSpacecraft& Spacecraft) override
@@ -87,15 +86,11 @@ public:
 	----------------------------------------------------*/
 
 protected:
-	// Initial propellant amount
+	// Current rate of consumption
 	UPROPERTY(Replicated)
-	float InitialPropellantMass;
+	float PropellantRate;
 
 	// Current propellant amount
 	UPROPERTY(Replicated)
 	float PropellantMass;
-
-	// Current rate of consumption
-	UPROPERTY(Replicated)
-	float PropellantRate;
 };

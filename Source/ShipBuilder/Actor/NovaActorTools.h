@@ -58,22 +58,23 @@ public:
 
 public:
 	/** Apply the filter to a current position, speed, to match a target */
-	template <bool UnwindPosition = false, typename T>
-	void ApplyFilter(T& CurrentPosition, T& CurrentVelocity, T& TargetPosition, const float DeltaTime, const bool IsGamepad) const
+	template <bool UnwindPosition = false>
+	void ApplyFilter(
+		float& CurrentPosition, float& CurrentVelocity, float& TargetPosition, const float DeltaTime, const bool IsGamepad) const
 	{
-		T MaximumVelocity = Velocity;
+		float MaximumVelocity = Velocity;
 		if (IsGamepad)
 		{
 			MaximumVelocity *= GamepadMultiplier;
 		}
 
 		// Compute acceleration and resistance
-		T Acc = FMath::Pow(TargetPosition, static_cast<T>(InputPower)) * Acceleration;
-		T Res = FMath::Sign(CurrentVelocity) *
-				(Resistance * FMath::Square(CurrentVelocity) + (Acc == 0 ? Brake2 + Brake * FMath::Abs(CurrentVelocity) : 0));
-		T MaxResDeltaSpeed = CurrentVelocity;
-		T AccDeltaSpeed    = Acc * DeltaTime;
-		T ResDeltaSpeed    = -(FMath::Abs(Res * DeltaTime) > FMath::Abs(MaxResDeltaSpeed) ? MaxResDeltaSpeed : Res * DeltaTime);
+		float Acc = FMath::Pow(TargetPosition, InputPower) * Acceleration;
+		float Res = FMath::Sign(CurrentVelocity) *
+					(Resistance * FMath::Square(CurrentVelocity) + (Acc == 0 ? Brake2 + Brake * FMath::Abs(CurrentVelocity) : 0));
+		float MaxResDeltaSpeed = CurrentVelocity;
+		float AccDeltaSpeed    = Acc * DeltaTime;
+		float ResDeltaSpeed    = -(FMath::Abs(Res * DeltaTime) > FMath::Abs(MaxResDeltaSpeed) ? MaxResDeltaSpeed : Res * DeltaTime);
 
 		// Update velocity, integrate the current angle and consume the input
 		CurrentVelocity += AccDeltaSpeed + ResDeltaSpeed;
