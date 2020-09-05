@@ -1,13 +1,13 @@
-// Astral Shipwright - Gwennaël Arbona
+// Spaceship Builder - Gwennaël Arbona
 
 using UnrealBuildTool;
 
-public class AstralShipwright : ModuleRules
+public class ShipBuilder : ModuleRules
 {
-    public AstralShipwright(ReadOnlyTargetRules Target) : base(Target)
+    public ShipBuilder(ReadOnlyTargetRules Target) : base(Target)
     {
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
-        PublicIncludePaths.Add("AstralShipwright");
+		PublicIncludePaths.Add("ShipBuilder");
         PrivatePCHHeaderFile = "Nova.h";
 
         PrivateDependencyModuleNames.AddRange(new string[] {
@@ -27,10 +27,9 @@ public class AstralShipwright : ModuleRules
             "RHI",
             "RenderCore",
 
-            "HTTP",
+            "Http",
             "OnlineSubsystem",
-            "OnlineSubsystemUtils",
-            "NetCore"
+            "OnlineSubsystemUtils"
         });
 
         if (Target.Type == TargetType.Editor)
@@ -47,8 +46,8 @@ public class AstralShipwright : ModuleRules
             });
         }
 
-        DynamicallyLoadedModuleNames.Add("OnlineSubsystemSteam");
+        DynamicallyLoadedModuleNames.Add("OnlineSubsystemOpen Source");
 
-        AddEngineThirdPartyPrivateStaticDependencies(Target, "Steamworks");
+        AddEngineThirdPartyPrivateStaticDependencies(Target, "Open Sourceworks");
     }
 }

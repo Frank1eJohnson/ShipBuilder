@@ -237,6 +237,7 @@ public:
 		SNovaFadingWidget::Construct(SNovaFadingWidget::FArguments()
 			.FadeDuration(ENovaUIConstants::FadeDurationShort)
 			.DisplayDuration(4.0f)
+			.Visibility(InArgs._Visibility)
 		);
 
 		ChildSlot
@@ -247,7 +248,6 @@ public:
 			.WrapTextAt(InArgs._WrapTextAt)
 			.AutoWrapText(InArgs._AutoWrapText)
 			.ColorAndOpacity(this, &SNovaFadingWidget::GetSlateColor)
-			.Visibility(InArgs._Visibility)
 		];
 		// clang-format on
 	}

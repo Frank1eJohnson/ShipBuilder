@@ -770,7 +770,7 @@ void FNovaSpacecraft::UpdateProceduralElements()
 					else if (IsSameModuleInPreviousCompartment(CompartmentIndex, ModuleIndex))
 					{
 						Module.ForwardBulkheadType = ENovaBulkheadType::Skirt;
-						Module.NeedsWiring         = false;
+						Module.NeedsWiring         = !Module.Description->AllowCommonWiring;
 						// NLOG("FNovaSpacecraft::UpdateProceduralElements : -> forward bulkhead is Skirt");
 					}
 
