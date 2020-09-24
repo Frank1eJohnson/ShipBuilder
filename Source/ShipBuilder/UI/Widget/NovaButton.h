@@ -84,7 +84,7 @@ public:
 
 	bool SupportsKeyboardFocus() const override
 	{
-		return ButtonFocusable.Get(true);
+		return ButtonFocusable.Get(true) && IsButtonEnabled();
 	}
 
 	/** Mouse click	*/
