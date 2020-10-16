@@ -1,6 +1,6 @@
 # Spaceship Builder
 
-Spaceship Builder is a spaceship building game coming to Open Source since 2020.
+Spaceship Builder is a shipbuilding game coming to Open Source since 2020.
 
 
 
