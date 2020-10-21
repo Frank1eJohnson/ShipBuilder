@@ -54,12 +54,11 @@ void SNovaTabPanel::OnFocusChanged(TSharedPtr<class SNovaButton> FocusButton)
 	}
 }
 
-void SNovaTabPanel::Initialize(int32 Index, bool IsBlurred, TSharedPtr<SNovaTabView> Parent)
+void SNovaTabPanel::Initialize(int32 Index, bool IsBlurred, const FSlateBrush* OptionalBackground, SNovaTabView* Parent)
 {
-	NCHECK(Parent.IsValid());
-
 	Blurred       = IsBlurred;
 	TabIndex      = Index;
+	Background    = OptionalBackground;
 	ParentTabView = Parent;
 }
 
@@ -110,7 +109,6 @@ SNovaTabView::SNovaTabView() : DesiredTabIndex(0), CurrentTabIndex(0), CurrentBl
 void SNovaTabView::Construct(const FArguments& InArgs)
 {
 	// Data
-	SlotInfo                            = InArgs.Slots;
 	const FNovaMainTheme&   Theme       = FNovaStyleSet::GetMainTheme();
 	const FNovaButtonTheme& ButtonTheme = FNovaStyleSet::GetButtonTheme();
 
@@ -130,6 +128,14 @@ void SNovaTabView::Construct(const FArguments& InArgs)
 				.BlurStrength(this, &SNovaTabView::GetBlurStrength)
 				.Padding(0)
 			]
+		]
+
+		// Optional background overlay
+		+ SOverlay::Slot()
+		[
+			SNew(SBorder)
+			.BorderImage(this, &SNovaTabView::GetGlobalBackground)
+			.BorderBackgroundColor(this, &SNovaTabView::GetGlobalBackgroundColor)
 		]
 
 		+ SOverlay::Slot()
@@ -240,7 +246,7 @@ void SNovaTabView::Construct(const FArguments& InArgs)
 
 	// Slot contents
 	int32 Index = 0;
-	for (SNovaTabView::FSlot* TabSlot : InArgs.Slots)
+	for (FSlot::FSlotArguments& Arg : const_cast<TArray<FSlot::FSlotArguments>&>(InArgs._Slots))
 	{
 		// Add header entry
 		Header->AddSlot()
@@ -249,23 +255,29 @@ void SNovaTabView::Construct(const FArguments& InArgs)
 			SNew(SNovaButton) // No navigation
 			.Theme("TabButton")
 			.Size("TabButtonSize")
-			.Text(TabSlot->HeaderText)
-			.HelpText(TabSlot->HeaderHelpText)
+			.Text(Arg._Header)
+			.HelpText(Arg._HeaderHelp)
 			.OnClicked(this, &SNovaTabView::SetTabIndex, Index)
 			.Visibility(this, &SNovaTabView::GetTabVisibility, Index)
 			.Enabled(this, &SNovaTabView::IsTabEnabled, Index)
 			.Focusable(false)
 		];
 		
+
 		// Add content
-		SNovaTabPanel* TabPanel = static_cast<SNovaTabPanel*>(&TabSlot->GetWidget().Get());
-		TabPanel->Initialize(Index, TabSlot->Blurred, MakeShareable(this));
+		SNovaTabPanel* TabPanel = static_cast<SNovaTabPanel*>(Arg.GetAttachedWidget().Get());
+		TabPanel->Initialize(Index,
+			Arg._Blur.IsSet() ? Arg._Blur.Get() : false,
+			Arg._Background.IsSet() ? Arg._Background.Get() : false, 
+			this);
+
 		Content->AddSlot()
 		[
-			TabSlot->GetWidget()
+			Arg.GetAttachedWidget().ToSharedRef()
 		];
 
 		Panels.Add(TabPanel);
+		PanelVisibility.Add(Arg._Visible);
 
 		Index++;
 	}
@@ -285,10 +297,10 @@ void SNovaTabView::Tick(const FGeometry& AllottedGeometry, const double CurrentT
 	// If we lost the current tab, find another one
 	if (!IsTabVisible(CurrentTabIndex) && !IsTabVisible(DesiredTabIndex))
 	{
-		for (int32 Index = 0; Index < SlotInfo.Num(); Index++)
+		for (int32 Index = 0; Index < Panels.Num(); Index++)
 		{
 			int32 RelativeIndex = (Index / 2 + 1) * (Index % 2 != 0 ? 1 : -1);
-			RelativeIndex       = CurrentTabIndex + (RelativeIndex % SlotInfo.Num());
+			RelativeIndex       = CurrentTabIndex + (RelativeIndex % Panels.Num());
 
 			if (RelativeIndex >= 0 && IsTabVisible(RelativeIndex))
 			{
@@ -327,7 +339,7 @@ void SNovaTabView::ShowPreviousTab()
 
 void SNovaTabView::ShowNextTab()
 {
-	for (int32 Index = CurrentTabIndex + 1; Index < SlotInfo.Num(); Index++)
+	for (int32 Index = CurrentTabIndex + 1; Index < Panels.Num(); Index++)
 	{
 		if (IsTabVisible(Index))
 		{
@@ -341,7 +353,7 @@ void SNovaTabView::SetTabIndex(int32 Index)
 {
 	NLOG("SNovaTabView::SetTabIndex : %d, was %d", Index, CurrentTabIndex);
 
-	if (Index >= 0 && Index < SlotInfo.Num() && Index != CurrentTabIndex)
+	if (Index >= 0 && Index < Panels.Num() && Index != CurrentTabIndex)
 	{
 		DesiredTabIndex = Index;
 	}
@@ -357,14 +369,16 @@ int32 SNovaTabView::GetDesiredTabIndex() const
 	return DesiredTabIndex;
 }
 
-float SNovaTabView::GetCurrentTabAlpha() const
-{
-	return GetCurrentTabContent()->GetCurrentAlpha();
-}
-
 bool SNovaTabView::IsTabVisible(int32 Index) const
 {
-	return (!SlotInfo[Index]->IsVisible.IsBound() || SlotInfo[Index]->IsVisible.Get());
+	NCHECK(Index >= 0 && Index < PanelVisibility.Num());
+
+	if (PanelVisibility[Index].IsBound() || PanelVisibility[Index].IsSet())
+	{
+		return PanelVisibility[Index].Get();
+	}
+
+	return true;
 }
 
 TSharedRef<SNovaTabPanel> SNovaTabView::GetCurrentTabContent() const
@@ -378,12 +392,7 @@ TSharedRef<SNovaTabPanel> SNovaTabView::GetCurrentTabContent() const
 
 EVisibility SNovaTabView::GetTabVisibility(int32 Index) const
 {
-	if (SlotInfo[Index]->IsVisible.IsBound())
-	{
-		return SlotInfo[Index]->IsVisible.Get() ? EVisibility::Visible : EVisibility::Collapsed;
-	}
-
-	return EVisibility::Visible;
+	return IsTabVisible(Index) ? EVisibility::Visible : EVisibility::Collapsed;
 }
 
 bool SNovaTabView::IsTabEnabled(int32 Index) const
@@ -393,12 +402,22 @@ bool SNovaTabView::IsTabEnabled(int32 Index) const
 
 FLinearColor SNovaTabView::GetColor() const
 {
-	return FLinearColor(1.0f, 1.0f, 1.0f, GetCurrentTabAlpha());
+	return FLinearColor(1.0f, 1.0f, 1.0f, GetCurrentTabContent()->GetCurrentAlpha());
 }
 
 FSlateColor SNovaTabView::GetBackgroundColor() const
 {
 	return FLinearColor(1.0f, 1.0f, 1.0f, CurrentBlurAlpha);
+}
+
+FSlateColor SNovaTabView::GetGlobalBackgroundColor() const
+{
+	return FLinearColor(1.0f, 1.0f, 1.0f, GetCurrentTabContent()->GetCurrentAlpha());
+}
+
+const FSlateBrush* SNovaTabView::GetGlobalBackground() const
+{
+	return GetCurrentTabContent()->GetBackground();
 }
 
 bool SNovaTabView::IsBlurSplit() const
