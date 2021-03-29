@@ -6,8 +6,7 @@
 #include "NovaGameModeStates.h"
 #include "NovaGameState.h"
 #include "NovaOrbitalSimulationComponent.h"
-
-#include "Game/Settings/NovaWorldSettings.h"
+#include "NovaWorldSettings.h"
 
 #include "Actor/NovaPlayerStart.h"
 #include "Player/NovaPlayerController.h"

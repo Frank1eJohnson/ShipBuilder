@@ -3,7 +3,7 @@
 #include "NovaMainMenuSettings.h"
 #include "NovaMainMenu.h"
 
-#include "Game/Settings/NovaGameUserSettings.h"
+#include "Game/NovaGameUserSettings.h"
 
 #include "Player/NovaGameViewportClient.h"
 #include "Player/NovaPlayerController.h"
