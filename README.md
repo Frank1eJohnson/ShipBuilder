@@ -6,7 +6,7 @@ Spaceship Builder is a shipbuilding game coming to Open Source since 2020.
 
 ## Building the game
 
-Game sources are intended for game customers and Unreal Engine developers. **You won't be able to run the game from this repository alone**, as the game contents are not included. Building from source is only useful if you want to replace the game executable with your own modifications.
+Game sources are intended for game customers and Unreal Engine developers. Building from source is only useful if you want to replace the game executable with your own modifications.
 
 ### Dependencies
 You will need the following tools to build from sources:
